@@ -16,7 +16,8 @@ export default function HomePage() {
 
   return (
     <div className="space-y-8">
-      <div>
+      <div className="rule-bottom pb-6">
+        <p className="section-label mb-3">Community feed</p>
         <h1 className="page-title">Лента</h1>
         <p className="text-sm text-muted mt-1">
           Обновления проектов и новые объявления
@@ -26,7 +27,7 @@ export default function HomePage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <section className="lg:col-span-2 space-y-4">
           <h2 className="section-title">Последние обновления</h2>
-          <div className="card p-5">
+          <div className="card p-6">
             {recentUpdates.length > 0 ? (
               <div className="relative pl-4">
                 <div className="absolute left-[5px] top-2 bottom-2 w-px bg-border" />
@@ -53,9 +54,10 @@ export default function HomePage() {
                 <Link
                   key={project.id}
                   href={`/projects/${project.id}`}
-                  className="block card card-hover p-3 transition-colors"
+                  className="block card card-hover p-4 transition-colors"
                 >
-                  <p className="text-sm font-medium text-foreground line-clamp-1">
+                  <p className="meta-text mb-1">{project.category}</p>
+                  <p className="text-sm font-extrabold text-foreground line-clamp-1">
                     {project.title}
                   </p>
                   <p className="text-xs text-muted mt-0.5 line-clamp-1">

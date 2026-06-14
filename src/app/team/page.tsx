@@ -29,7 +29,8 @@ export default function TeamPage() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="rule-bottom pb-6">
+        <p className="section-label mb-3">Team matching</p>
         <h1 className="page-title">Поиск команды</h1>
         <p className="text-sm text-muted mt-1">
           {teamRequests.length} открытых позиций
@@ -53,9 +54,9 @@ export default function TeamPage() {
                 key={role}
                 type="button"
                 onClick={() => setSelectedRole(role)}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${
+                className={`px-2.5 py-1 text-xs font-medium border transition-colors ${
                   selectedRole === role
-                    ? 'bg-primary-light text-primary border-blue-200'
+                    ? 'bg-primary text-white border-primary'
                     : 'bg-white text-muted border-border hover:bg-surface'
                 }`}
               >
@@ -66,7 +67,7 @@ export default function TeamPage() {
         </div>
       </div>
 
-      <p className="text-xs text-muted">Найдено: {filtered.length}</p>
+      <p className="meta-text">Найдено: {filtered.length}</p>
 
       {filtered.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

@@ -25,27 +25,27 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex">
-      <aside className="hidden lg:flex w-56 shrink-0 flex-col border-r border-border bg-sidebar fixed inset-y-0 left-0 z-40">
-        <div className="h-14 flex items-center px-4 border-b border-border">
+      <aside className="hidden lg:flex w-60 shrink-0 flex-col border-r border-border bg-card fixed inset-y-0 left-0 z-40">
+        <div className="h-16 flex items-center px-5 border-b border-border">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center text-white text-xs font-semibold">
+            <div className="w-7 h-7 bg-primary flex items-center justify-center text-white text-xs font-bold">
               S
             </div>
-            <span className="text-sm font-semibold text-foreground">StartupHub</span>
+            <span className="text-sm font-extrabold text-foreground tracking-normal">StartupHub</span>
           </Link>
         </div>
 
-        <nav className="flex-1 p-3 space-y-0.5">
+        <nav className="flex-1 p-4 space-y-1">
           {navLinks.map((link) => {
             const active = isActive(pathname, link.href, link.exact);
             return (
               <Link
                 key={link.href}
                 href={link.href}
-                className={`block px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                className={`block border px-3 py-2 text-sm font-semibold transition-colors ${
                   active
-                    ? 'bg-primary-light text-primary'
-                    : 'text-muted hover:text-foreground hover:bg-surface'
+                    ? 'bg-primary text-white border-primary'
+                    : 'text-muted border-transparent hover:text-foreground hover:border-border hover:bg-white'
                 }`}
               >
                 {link.label}
@@ -54,20 +54,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        <div className="p-3 border-t border-border">
-          <Link href="/create" className="btn-primary w-full text-center block text-sm">
+        <div className="p-4 border-t border-border">
+          <Link href="/create" className="btn-primary w-full text-center block">
             Создать проект
           </Link>
         </div>
       </aside>
 
-      <div className="flex-1 lg:pl-56 flex flex-col min-h-screen">
-        <header className="h-14 shrink-0 border-b border-border bg-white flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30">
+      <div className="flex-1 lg:pl-60 flex flex-col min-h-screen">
+        <header className="h-16 shrink-0 border-b border-border bg-card/95 backdrop-blur flex items-center justify-between px-4 lg:px-8 sticky top-0 z-30">
           <div className="flex items-center gap-3 lg:hidden">
             <button
               type="button"
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="p-1.5 rounded-md hover:bg-surface text-muted"
+              className="p-1.5 border border-border hover:bg-surface text-muted"
               aria-label="Меню"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -87,17 +87,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
           <Link
             href="/profile"
-            className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-surface transition-colors"
+            className="flex items-center gap-2 px-2 py-1 border border-transparent hover:border-border hover:bg-white transition-colors"
           >
             <Avatar name={currentUser?.name} avatar={currentUser?.avatar} size="sm" />
-            <span className="hidden sm:block text-sm text-muted">
+            <span className="hidden sm:block meta-text">
               {currentUser?.name ?? 'Профиль'}
             </span>
           </Link>
         </header>
 
         {mobileOpen && (
-          <nav className="lg:hidden border-b border-border bg-white px-4 py-3 space-y-0.5">
+          <nav className="lg:hidden border-b border-border bg-card px-4 py-3 space-y-1">
             {navLinks.map((link) => {
               const active = isActive(pathname, link.href, link.exact);
               return (
@@ -105,8 +105,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   key={link.href}
                   href={link.href}
                   onClick={() => setMobileOpen(false)}
-                  className={`block px-3 py-2 rounded-md text-sm font-medium ${
-                    active ? 'bg-primary-light text-primary' : 'text-muted hover:bg-surface'
+                  className={`block border px-3 py-2 text-sm font-semibold ${
+                    active ? 'bg-primary text-white border-primary' : 'text-muted border-transparent hover:bg-surface'
                   }`}
                 >
                   {link.label}
@@ -116,14 +116,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <Link
               href="/create"
               onClick={() => setMobileOpen(false)}
-              className="block px-3 py-2 rounded-md text-sm font-medium text-primary"
+              className="block px-3 py-2 text-sm font-semibold text-primary"
             >
               Создать проект
             </Link>
           </nav>
         )}
 
-        <main className="flex-1 px-4 lg:px-6 py-6 max-w-6xl w-full mx-auto">
+        <main className="flex-1 px-4 lg:px-8 py-8 max-w-7xl w-full mx-auto">
           {children}
         </main>
       </div>

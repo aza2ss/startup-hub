@@ -21,30 +21,31 @@ export default async function ProjectPage({
 
   return (
     <div className="space-y-6">
-      <div className="border-b border-border pb-5">
-        <div className="flex items-center gap-2 mb-2">
+      <div className="border-b border-border pb-6">
+        <p className="section-label mb-3">Project page</p>
+        <div className="flex items-center gap-2 mb-3">
           <StatusBadge status={project.status} />
-          <span className="text-xs text-muted">{project.category}</span>
+          <span className="meta-text">{project.category}</span>
         </div>
-        <h1 className="text-xl font-semibold text-foreground mb-1">
+        <h1 className="page-title mb-3">
           {project.title}
         </h1>
-        <p className="text-sm text-muted max-w-2xl">{project.description}</p>
+        <p className="text-base text-muted max-w-2xl leading-relaxed">{project.description}</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <section className="card p-5">
+          <section className="card p-6">
             <h2 className="section-title mb-4">Progress log</h2>
             <ProgressLog updates={project.progressLog} />
           </section>
 
-          <section className="card p-5">
+          <section className="card p-6">
             <h2 className="section-title mb-3">Описание</h2>
             <p className="text-sm text-muted leading-relaxed">
               {project.longDescription}
             </p>
-            <div className="flex flex-wrap gap-1 mt-4">
+            <div className="flex flex-wrap gap-1.5 mt-5">
               {[...project.tags, ...project.technologies].map((tag) => (
                 <span key={tag} className="tag-pill">
                   {tag}
@@ -55,7 +56,7 @@ export default async function ProjectPage({
         </div>
 
         <aside className="space-y-4">
-          <section className="card p-4">
+          <section className="card p-5">
             <h3 className="section-label mb-3">Команда</h3>
             <div className="space-y-3">
               {project.teamMembers.map((member) => (
@@ -73,7 +74,7 @@ export default async function ProjectPage({
           </section>
 
           {project.links.length > 0 && (
-            <section className="card p-4">
+            <section className="card p-5">
               <h3 className="section-label mb-3">Ссылки</h3>
               <ul className="space-y-2">
                 {project.links.map((link) => (
@@ -92,7 +93,7 @@ export default async function ProjectPage({
             </section>
           )}
 
-          <section className="card p-4">
+          <section className="card p-5">
             <h3 className="section-label mb-3">Информация</h3>
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between gap-3">

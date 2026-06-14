@@ -15,7 +15,10 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="page-title">Профиль</h1>
+      <div className="rule-bottom pb-6">
+        <p className="section-label mb-3">Founder profile</p>
+        <h1 className="page-title">Профиль</h1>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="space-y-4">
@@ -34,7 +37,7 @@ export default function ProfilePage() {
           <section>
             <div className="flex items-center justify-between mb-3">
               <h2 className="section-title">Мои проекты</h2>
-              <span className="text-xs text-muted">{userProjects.length}</span>
+              <span className="meta-text">{userProjects.length}</span>
             </div>
             {userProjects.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

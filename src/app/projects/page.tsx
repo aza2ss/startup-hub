@@ -33,7 +33,8 @@ export default function ProjectsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="rule-bottom pb-6">
+        <p className="section-label mb-3">Project directory</p>
         <h1 className="page-title">Проекты</h1>
         <p className="text-sm text-muted mt-1">
           {projects.length} проектов на платформе
@@ -56,9 +57,9 @@ export default function ProjectsPage() {
                 key={value}
                 type="button"
                 onClick={() => setSelectedStatus(value)}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${
+                className={`px-2.5 py-1 text-xs font-medium border transition-colors ${
                   selectedStatus === value
-                    ? 'bg-primary-light text-primary border-blue-200'
+                    ? 'bg-primary text-white border-primary'
                     : 'bg-white text-muted border-border hover:bg-surface'
                 }`}
               >
@@ -69,7 +70,7 @@ export default function ProjectsPage() {
                 key={value}
                 type="button"
                 onClick={() => setSelectedStatus(value)}
-                className={`rounded-md transition-opacity ${
+                className={`transition-opacity ${
                   selectedStatus === value ? 'opacity-100' : 'opacity-60 hover:opacity-80'
                 }`}
                 aria-label={label}
@@ -81,7 +82,7 @@ export default function ProjectsPage() {
         </div>
       </div>
 
-      <p className="text-xs text-muted">Найдено: {filtered.length}</p>
+      <p className="meta-text">Найдено: {filtered.length}</p>
 
       {filtered.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

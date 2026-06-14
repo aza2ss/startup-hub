@@ -27,7 +27,7 @@ export default function Avatar({
         alt={name ?? 'Пользователь'}
         width={64}
         height={64}
-        className={`${sizeClasses[size]} rounded-full object-cover border border-border ${className}`}
+        className={`${sizeClasses[size]} object-cover border border-border ${className}`}
       />
     );
   }
@@ -36,7 +36,7 @@ export default function Avatar({
 
   return (
     <div
-      className={`${sizeClasses[size]} rounded-full bg-surface border border-border flex items-center justify-center font-medium text-muted shrink-0 ${className}`}
+      className={`${sizeClasses[size]} bg-white border border-border flex items-center justify-center font-mono font-bold text-primary shrink-0 ${className}`}
       aria-label={name ?? 'Пользователь'}
     >
       {initial}

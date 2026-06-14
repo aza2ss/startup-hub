@@ -38,7 +38,8 @@ export default function CreateProjectPage() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <div>
+      <div className="rule-bottom pb-6">
+        <p className="section-label mb-3">New project</p>
         <h1 className="page-title">Создать проект</h1>
         <p className="text-sm text-muted mt-1">
           Опишите проект и укажите, кого ищете в команду
@@ -46,8 +47,8 @@ export default function CreateProjectPage() {
       </div>
 
       {submitted && (
-        <div className="card p-3 border-emerald-200 bg-emerald-50">
-          <p className="text-sm text-emerald-700">
+          <div className="card p-4 border-primary bg-primary-light">
+          <p className="text-sm text-primary">
             Проект создан в демо-режиме. Данные пока не сохраняются.
           </p>
         </div>
@@ -125,7 +126,7 @@ export default function CreateProjectPage() {
                   key={status}
                   type="button"
                   onClick={() => updateField('status', status)}
-                  className={`rounded-md transition-opacity ${
+                  className={`transition-opacity ${
                     form.status === status ? 'opacity-100' : 'opacity-50 hover:opacity-75'
                   }`}
                 >

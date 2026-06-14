@@ -11,20 +11,19 @@ const typeLabels: Record<ProgressUpdate['type'], string> = {
 
 export default function ProgressUpdateItem({ update }: { update: ProgressUpdate }) {
   return (
-    <div className="relative flex gap-4 pb-6 last:pb-0">
-      <div className="absolute -left-4 top-1.5 w-2.5 h-2.5 rounded-full bg-white border-2 border-primary z-10" />
+    <div className="relative flex gap-4 pb-7 last:pb-0">
+      <div className="absolute -left-4 top-1.5 w-2.5 h-2.5 bg-primary border-2 border-card z-10" />
 
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+        <div className="flex items-center gap-2 mb-2 flex-wrap">
           <Avatar name={update.authorName} avatar={update.authorAvatar} size="sm" />
-          <span className="text-sm text-muted">
+          <span className="text-sm font-semibold text-foreground">
             {update.authorName ?? 'Участник'}
           </span>
-          <span className="text-xs text-muted-light">·</span>
-          <span className="text-xs text-muted-light">
+          <span className="meta-text">
             {formatLongDate(update.createdAt)}
           </span>
-          <span className="text-xs px-1.5 py-0.5 rounded bg-surface text-muted border border-border">
+          <span className="meta-text border border-border px-1.5 py-0.5 bg-white">
             {typeLabels[update.type]}
           </span>
         </div>

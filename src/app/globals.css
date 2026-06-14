@@ -1,23 +1,24 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-background: #f9fafb;
-  --color-foreground: #111827;
-  --color-card: #ffffff;
-  --color-border: #e5e7eb;
-  --color-border-hover: #d1d5db;
-  --color-primary: #2563eb;
-  --color-primary-hover: #1d4ed8;
-  --color-primary-light: #eff6ff;
-  --color-muted: #6b7280;
-  --color-muted-light: #9ca3af;
-  --color-surface: #f3f4f6;
+  --color-background: #f7f6f3;
+  --color-foreground: #101010;
+  --color-card: #fffefa;
+  --color-border: #e6e2da;
+  --color-border-hover: #cfc8bd;
+  --color-primary: #c8201e;
+  --color-primary-hover: #8f1715;
+  --color-primary-light: #fff1ef;
+  --color-muted: #6f6a63;
+  --color-muted-light: #9c958b;
+  --color-surface: #efede8;
   --color-sidebar: #ffffff;
   --font-sans: Arial, Helvetica, sans-serif;
-  --color-status-idea: #d97706;
-  --color-status-mvp: #2563eb;
-  --color-status-growth: #059669;
-  --color-status-scaling: #7c3aed;
+  --font-mono: "Courier New", Courier, monospace;
+  --color-status-idea: #a16207;
+  --color-status-mvp: #1f5f8b;
+  --color-status-growth: #177245;
+  --color-status-scaling: #7a1d1d;
 }
 
 * {
@@ -30,27 +31,31 @@ body {
   color: var(--color-foreground);
   font-family: var(--font-sans);
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
 
 .card {
   background: var(--color-card);
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: 0;
 }
 
 .card-hover:hover {
   border-color: var(--color-border-hover);
-  background: #fafafa;
+  background: #ffffff;
 }
 
 .btn-primary {
   background: var(--color-primary);
   color: white;
   border: none;
-  border-radius: 6px;
-  padding: 8px 16px;
-  font-size: 0.875rem;
-  font-weight: 500;
+  border-radius: 0;
+  padding: 9px 16px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   cursor: pointer;
   transition: background 0.15s ease;
 }
@@ -63,10 +68,13 @@ body {
   background: white;
   color: var(--color-foreground);
   border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: 0;
   padding: 8px 16px;
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease;
 }
@@ -79,8 +87,8 @@ body {
 .input-field {
   background: white;
   border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 8px 12px;
+  border-radius: 0;
+  padding: 10px 12px;
   color: var(--color-foreground);
   width: 100%;
   font-size: 0.875rem;
@@ -90,7 +98,7 @@ body {
 
 .input-field:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 0 0 3px rgba(200, 32, 30, 0.09);
 }
 
 .input-field::placeholder {
@@ -100,32 +108,54 @@ body {
 .tag-pill {
   display: inline-flex;
   align-items: center;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  background: var(--color-surface);
+  padding: 3px 8px;
+  border-radius: 0;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: transparent;
   color: var(--color-muted);
   border: 1px solid var(--color-border);
 }
 
 .page-title {
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-size: clamp(1.7rem, 2.6vw, 2.55rem);
+  font-weight: 800;
   color: var(--color-foreground);
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
+  line-height: 1;
 }
 
 .section-title {
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: 0.95rem;
+  font-weight: 800;
   color: var(--color-foreground);
 }
 
 .section-label {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--color-primary);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.12em;
+}
+
+.meta-text {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.rule-top {
+  border-top: 1px solid var(--color-border);
+}
+
+.rule-bottom {
+  border-bottom: 1px solid var(--color-border);
 }

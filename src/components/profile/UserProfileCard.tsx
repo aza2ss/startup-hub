@@ -7,10 +7,10 @@ export default function UserProfileCard({ user }: { user: User }) {
       <div className="flex items-start gap-4 mb-4">
         <UserAvatar user={user} size="lg" />
         <div className="min-w-0">
-          <h2 className="text-base font-semibold text-foreground">
+          <p className="meta-text mb-2">{user.role}</p>
+          <h2 className="text-xl font-extrabold text-foreground">
             {user.name ?? 'Профиль не заполнен'}
           </h2>
-          <p className="text-sm text-muted">{user.role}</p>
         </div>
       </div>
 
