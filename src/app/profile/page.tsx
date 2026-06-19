@@ -1,3 +1,6 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { getProjectsByUser, getProgressUpdatesByUser } from '@/lib/api';
 import { getCurrentUser } from '@/lib/session';
@@ -5,13 +8,29 @@ import UserProfileCard from '@/components/profile/UserProfileCard';
 import ProjectCard from '@/components/projects/ProjectCard';
 import ProgressUpdateItem from '@/components/progress/ProgressUpdateItem';
 import EmptyState from '@/components/ui/EmptyState';
+import type { Project, ProgressUpdate, User } from '@/types';
 
 export default function ProfilePage() {
-  const user = getCurrentUser();
-  if (!user) return null;
+  const [user, setUser] = useState<User | null>(null);
+  const [userProjects, setUserProjects] = useState<Project[]>([]);
+  const [userUpdates, setUserUpdates] = useState<ProgressUpdate[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const userProjects = getProjectsByUser(user.id);
-  const userUpdates = getProgressUpdatesByUser(user.id);
+  useEffect(() => {
+    const currUser = getCurrentUser();
+    if (currUser) {
+      setUser(currUser);
+      setUserProjects(getProjectsByUser(currUser.id));
+      setUserUpdates(getProgressUpdatesByUser(currUser.id));
+    }
+    setLoading(false);
+  }, []);
+
+  if (loading) {
+    return <div className="text-sm text-muted">Загрузка...</div>;
+  }
+
+  if (!user) return null;
 
   return (
     <div className="space-y-6">
