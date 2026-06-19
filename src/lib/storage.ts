@@ -1,5 +1,5 @@
-import type { Project, ProgressUpdate, TeamRequest, User } from '@/types';
-import { projects as mockProjects, teamRequests as mockTeamRequests, users as mockUsers } from '@/data';
+import type { Project, ProgressUpdate, TeamRequest } from '@/types';
+import { projects as mockProjects, teamRequests as mockTeamRequests } from '@/data';
 
 const STORAGE_KEYS = {
   PROJECTS: 'startuphub_projects',
