@@ -1,14 +1,19 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getTeamRequests } from '@/lib/api';
 import TeamRequestCard from '@/components/team/TeamRequestCard';
 import EmptyState from '@/components/ui/EmptyState';
+import type { TeamRequest } from '@/types';
 
 export default function TeamPage() {
-  const teamRequests = getTeamRequests();
+  const [teamRequests, setTeamRequests] = useState<TeamRequest[]>([]);
   const [search, setSearch] = useState('');
   const [selectedRole, setSelectedRole] = useState('all');
+
+  useEffect(() => {
+    setTeamRequests(getTeamRequests());
+  }, []);
 
   const roleOptions = useMemo(() => {
     const roles = [...new Set(teamRequests.map((request) => request.role))].sort();
