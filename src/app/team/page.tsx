@@ -12,7 +12,10 @@ export default function TeamPage() {
   const [selectedRole, setSelectedRole] = useState('all');
 
   useEffect(() => {
-    setTeamRequests(getTeamRequests());
+    const timer = setTimeout(() => {
+      setTeamRequests(getTeamRequests());
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const roleOptions = useMemo(() => {

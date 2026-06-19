@@ -17,13 +17,16 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const currUser = getCurrentUser();
-    if (currUser) {
-      setUser(currUser);
-      setUserProjects(getProjectsByUser(currUser.id));
-      setUserUpdates(getProgressUpdatesByUser(currUser.id));
-    }
-    setLoading(false);
+    const timer = setTimeout(() => {
+      const currUser = getCurrentUser();
+      if (currUser) {
+        setUser(currUser);
+        setUserProjects(getProjectsByUser(currUser.id));
+        setUserUpdates(getProgressUpdatesByUser(currUser.id));
+      }
+      setLoading(false);
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   if (loading) {

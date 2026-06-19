@@ -12,6 +12,8 @@ import type { Project, ProgressUpdate } from '@/types';
 import { getCurrentUser } from '@/lib/session';
 import { saveProgressUpdate } from '@/lib/storage';
 
+type ProgressUpdateType = ProgressUpdate['type'];
+
 export default function ProjectPage({
   params,
 }: {
@@ -23,14 +25,17 @@ export default function ProjectPage({
 
   // Form state
   const [content, setContent] = useState('');
-  const [updateType, setUpdateType] = useState<'update' | 'milestone' | 'launch' | 'team'>('update');
+  const [updateType, setUpdateType] = useState<ProgressUpdateType>('update');
   const [formError, setFormError] = useState('');
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    const proj = getProjectById(id);
-    setProject(proj || null);
-    setLoading(false);
+    const timer = setTimeout(() => {
+      const proj = getProjectById(id);
+      setProject(proj || null);
+      setLoading(false);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [id]);
 
   if (loading) {
@@ -125,7 +130,7 @@ export default function ProjectPage({
                   <span className="text-xs text-muted">Тип:</span>
                   <select
                     value={updateType}
-                    onChange={(e) => setUpdateType(e.target.value as any)}
+                    onChange={(e) => setUpdateType(e.target.value as ProgressUpdateType)}
                     className="input-field py-1 px-2 text-xs w-auto"
                   >
                     <option value="update">Обновление</option>
