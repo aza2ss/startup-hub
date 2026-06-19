@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getProjects } from '@/lib/api';
-import type { ProjectStatus } from '@/types';
+import type { Project, ProjectStatus } from '@/types';
 import ProjectCard from '@/components/projects/ProjectCard';
 import StatusBadge from '@/components/projects/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
@@ -16,9 +16,13 @@ const statuses: { value: ProjectStatus | 'all'; label: string }[] = [
 ];
 
 export default function ProjectsPage() {
-  const projects = getProjects();
+  const [projects, setProjects] = useState<Project[]>([]);
   const [search, setSearch] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<ProjectStatus | 'all'>('all');
+
+  useEffect(() => {
+    setProjects(getProjects());
+  }, []);
 
   const filtered = useMemo(() => {
     return projects.filter((project) => {
