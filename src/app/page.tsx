@@ -15,19 +15,22 @@ export default function HomePage() {
   const [latestRequests, setLatestRequests] = useState<TeamRequest[]>([]);
 
   useEffect(() => {
-    const projs = getProjects();
-    const updates = getProgressUpdates().slice(0, 5);
-    const newest = [...projs]
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 4);
-    const reqs = getTeamRequests()
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 3);
+    const timer = setTimeout(() => {
+      const projs = getProjects();
+      const updates = getProgressUpdates().slice(0, 5);
+      const newest = [...projs]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 4);
+      const reqs = getTeamRequests()
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 3);
 
-    setProjectsList(projs);
-    setRecentUpdates(updates);
-    setNewProjects(newest);
-    setLatestRequests(reqs);
+      setProjectsList(projs);
+      setRecentUpdates(updates);
+      setNewProjects(newest);
+      setLatestRequests(reqs);
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   return (
