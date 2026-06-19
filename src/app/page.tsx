@@ -1,18 +1,34 @@
+'use client';
+
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
 import { getProgressUpdates, getProjects, getTeamRequests } from '@/lib/api';
 import ProjectCard from '@/components/projects/ProjectCard';
 import TeamRequestCard from '@/components/team/TeamRequestCard';
 import ProgressUpdateItem from '@/components/progress/ProgressUpdateItem';
+import type { Project, ProgressUpdate, TeamRequest } from '@/types';
 
 export default function HomePage() {
-  const projects = getProjects();
-  const recentUpdates = getProgressUpdates().slice(0, 5);
-  const newProjects = [...projects]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 4);
-  const latestRequests = getTeamRequests()
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 3);
+  const [projectsList, setProjectsList] = useState<Project[]>([]);
+  const [recentUpdates, setRecentUpdates] = useState<ProgressUpdate[]>([]);
+  const [newProjects, setNewProjects] = useState<Project[]>([]);
+  const [latestRequests, setLatestRequests] = useState<TeamRequest[]>([]);
+
+  useEffect(() => {
+    const projs = getProjects();
+    const updates = getProgressUpdates().slice(0, 5);
+    const newest = [...projs]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 4);
+    const reqs = getTeamRequests()
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 3);
+
+    setProjectsList(projs);
+    setRecentUpdates(updates);
+    setNewProjects(newest);
+    setLatestRequests(reqs);
+  }, []);
 
   return (
     <div className="space-y-8">
@@ -92,7 +108,7 @@ export default function HomePage() {
           </Link>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {projects.slice(0, 3).map((project) => (
+          {projectsList.slice(0, 3).map((project) => (
             <ProjectCard key={project.id} project={project} />
           ))}
         </div>
