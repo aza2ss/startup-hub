@@ -21,7 +21,10 @@ export default function ProjectsPage() {
   const [selectedStatus, setSelectedStatus] = useState<ProjectStatus | 'all'>('all');
 
   useEffect(() => {
-    setProjects(getProjects());
+    const timer = setTimeout(() => {
+      setProjects(getProjects());
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const filtered = useMemo(() => {
