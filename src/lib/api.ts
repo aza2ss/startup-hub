@@ -1,12 +1,13 @@
 import type { ProgressUpdate, Project, TeamRequest, User } from '@/types';
-import { projects, teamRequests, users } from '@/data';
+import { users } from '@/data';
+import { getAllProjects, getAllTeamRequests } from './storage';
 
 export function getProjects(): Project[] {
-  return projects;
+  return getAllProjects();
 }
 
 export function getProjectById(id: string): Project | undefined {
-  return projects.find((project) => project.id === id);
+  return getAllProjects().find((project) => project.id === id);
 }
 
 export function getProgressUpdatesByProjectId(projectId: string): ProgressUpdate[] {
@@ -14,7 +15,7 @@ export function getProgressUpdatesByProjectId(projectId: string): ProgressUpdate
 }
 
 export function getProgressUpdates(): ProgressUpdate[] {
-  return projects
+  return getAllProjects()
     .flatMap((project) => project.progressLog)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
@@ -24,11 +25,11 @@ export function getProgressUpdatesByUser(userId: string): ProgressUpdate[] {
 }
 
 export function getTeamRequests(): TeamRequest[] {
-  return teamRequests;
+  return getAllTeamRequests();
 }
 
 export function getTeamRequestsByProjectId(projectId: string): TeamRequest[] {
-  return teamRequests.filter((request) => request.projectId === projectId);
+  return getAllTeamRequests().filter((request) => request.projectId === projectId);
 }
 
 export function getUserById(id: string): User | undefined {
@@ -36,7 +37,7 @@ export function getUserById(id: string): User | undefined {
 }
 
 export function getProjectsByUser(userId: string): Project[] {
-  return projects.filter(
+  return getAllProjects().filter(
     (project) =>
       project.ownerId === userId ||
       project.teamMembers.some((member) => member.id === userId)
