@@ -1,23 +1,81 @@
+'use client';
+
+import { use, useState, useEffect } from 'react';
 import { notFound } from 'next/navigation';
-import { getProjectById, getProjects } from '@/lib/api';
+import { getProjectById } from '@/lib/api';
 import { formatLongDate } from '@/lib/format';
 import StatusBadge from '@/components/projects/StatusBadge';
 import ProgressLog from '@/components/progress/ProgressLog';
 import TeamRequestCard from '@/components/team/TeamRequestCard';
 import { UserAvatar } from '@/components/ui/Avatar';
+import type { Project, ProgressUpdate } from '@/types';
+import { getCurrentUser } from '@/lib/session';
+import { saveProgressUpdate } from '@/lib/storage';
 
-export function generateStaticParams() {
-  return getProjects().map((project) => ({ id: project.id }));
-}
-
-export default async function ProjectPage({
+export default function ProjectPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
-  const project = getProjectById(id);
-  if (!project) notFound();
+  const { id } = use(params);
+  const [project, setProject] = useState<Project | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Form state
+  const [content, setContent] = useState('');
+  const [updateType, setUpdateType] = useState<'update' | 'milestone' | 'launch' | 'team'>('update');
+  const [formError, setFormError] = useState('');
+  const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    const proj = getProjectById(id);
+    setProject(proj || null);
+    setLoading(false);
+  }, [id]);
+
+  if (loading) {
+    return <div className="text-sm text-muted">Загрузка...</div>;
+  }
+
+  if (!project) {
+    notFound();
+  }
+
+  const handleAddUpdate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!content.trim()) {
+      setFormError('Текст обновления не может быть пустым');
+      return;
+    }
+
+    const currentUser = getCurrentUser();
+    const newUpdate: ProgressUpdate = {
+      id: `pu-custom-${Date.now()}`,
+      projectId: project.id,
+      authorId: currentUser?.id || 'user-current',
+      authorName: currentUser?.name || 'Основатель проекта',
+      authorAvatar: null,
+      content: content.trim(),
+      type: updateType,
+      createdAt: new Date().toISOString(),
+    };
+
+    saveProgressUpdate(newUpdate);
+
+    // Update state to render immediately
+    setProject((prev) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        progressLog: [newUpdate, ...prev.progressLog],
+      };
+    });
+
+    setContent('');
+    setFormError('');
+    setSuccess(true);
+    setTimeout(() => setSuccess(false), 2500);
+  };
 
   return (
     <div className="space-y-6">
@@ -37,6 +95,52 @@ export default async function ProjectPage({
         <div className="lg:col-span-2 space-y-6">
           <section className="card p-6">
             <h2 className="section-title mb-4">Progress log</h2>
+            
+            {/* Add progress update form */}
+            <form onSubmit={handleAddUpdate} className="mb-6 p-4 bg-surface border border-border space-y-3">
+              <p className="meta-text">Добавить обновление прогресса</p>
+              
+              {success && (
+                <div className="p-2 bg-primary-light border border-primary text-xs text-primary font-bold">
+                  ✓ Обновление успешно добавлено!
+                </div>
+              )}
+
+              <div>
+                <textarea
+                  placeholder="Опишите, что было сделано..."
+                  value={content}
+                  onChange={(e) => {
+                    setContent(e.target.value);
+                    if (formError) setFormError('');
+                  }}
+                  rows={3}
+                  className={`input-field text-sm ${formError ? 'border-primary' : ''}`}
+                />
+                {formError && <p className="text-xs text-primary mt-1">{formError}</p>}
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted">Тип:</span>
+                  <select
+                    value={updateType}
+                    onChange={(e) => setUpdateType(e.target.value as any)}
+                    className="input-field py-1 px-2 text-xs w-auto"
+                  >
+                    <option value="update">Обновление</option>
+                    <option value="milestone">Этап (milestone)</option>
+                    <option value="launch">Запуск (launch)</option>
+                    <option value="team">Команда (team)</option>
+                  </select>
+                </div>
+
+                <button type="submit" className="btn-primary py-1.5 text-xs">
+                  Опубликовать обновление
+                </button>
+              </div>
+            </form>
+
             <ProgressLog updates={project.progressLog} />
           </section>
 
@@ -112,8 +216,8 @@ export default async function ProjectPage({
           </section>
 
           {project.openPositions.length > 0 && (
-            <section>
-              <h3 className="section-title mb-3">Открытые позиции</h3>
+            <section className="space-y-3">
+              <h3 className="section-title">Открытые позиции</h3>
               <div className="space-y-3">
                 {project.openPositions.map((position) => (
                   <TeamRequestCard key={position.id} request={position} />
