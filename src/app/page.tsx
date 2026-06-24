@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { getProgressUpdates, getProjects, getTeamRequests } from '@/lib/api';
+import { getProgressUpdates, getProjects, getTeamRequests } from '@/lib/actions';
+import { getCustomProjects, getCustomProgressUpdates } from '@/lib/storage';
 import ProjectCard from '@/components/projects/ProjectCard';
 import TeamRequestCard from '@/components/team/TeamRequestCard';
 import ProgressUpdateItem from '@/components/progress/ProgressUpdateItem';
@@ -15,18 +16,62 @@ export default function HomePage() {
   const [latestRequests, setLatestRequests] = useState<TeamRequest[]>([]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      const projs = getProjects();
-      const updates = getProgressUpdates().slice(0, 5);
+    const timer = setTimeout(async () => {
+      // 1. Fetch from SQLite via Server Actions
+      const dbProjs = await getProjects();
+      const dbUpdates = await getProgressUpdates();
+      const dbRequests = await getTeamRequests();
+
+      // 2. Fetch from LocalStorage
+      const localProjs = getCustomProjects();
+      const localUpdates = getCustomProgressUpdates();
+
+      // 3. Merge LocalStorage with database values
+      const mergedDbProjects = dbProjs.map((p) => {
+        const projUpdates = localUpdates.filter((u) => u.projectId === p.id);
+        if (projUpdates.length === 0) return p;
+        return {
+          ...p,
+          progressLog: [...projUpdates, ...p.progressLog],
+        };
+      });
+
+      const mergedLocalProjects = localProjs.map((p) => {
+        const projUpdates = localUpdates.filter((u) => u.projectId === p.id);
+        return {
+          ...p,
+          progressLog: [...projUpdates, ...p.progressLog],
+        };
+      });
+
+      const projs = [...mergedLocalProjects, ...mergedDbProjects];
+      
+      const allUpdates = [...localUpdates, ...dbUpdates].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+
       const newest = [...projs]
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         .slice(0, 4);
-      const reqs = getTeamRequests()
+
+      // Collect team requests from local projects
+      const localRequests: TeamRequest[] = [];
+      mergedLocalProjects.forEach((project) => {
+        if (project.openPositions) {
+          project.openPositions.forEach((pos) => {
+            localRequests.push({
+              ...pos,
+              projectTitle: project.title,
+            });
+          });
+        }
+      });
+      const reqs = [...localRequests, ...dbRequests]
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         .slice(0, 3);
 
       setProjectsList(projs);
-      setRecentUpdates(updates);
+      setRecentUpdates(allUpdates.slice(0, 5));
       setNewProjects(newest);
       setLatestRequests(reqs);
     }, 0);

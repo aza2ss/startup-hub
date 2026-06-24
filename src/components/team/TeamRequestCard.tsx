@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { TeamRequest } from '@/types';
 import { formatShortDate } from '@/lib/format';
 import { saveTeamApplication } from '@/lib/storage';
+import { createTeamApplication } from '@/lib/actions';
 
 export default function TeamRequestCard({
   request,
@@ -20,7 +21,7 @@ export default function TeamRequestCard({
   const [errors, setErrors] = useState<{ name?: string; contact?: string; message?: string }>({});
   const [success, setSuccess] = useState(false);
 
-  const handleApplySubmit = (e: React.FormEvent) => {
+  const handleApplySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: { name?: string; contact?: string; message?: string } = {};
     if (!name.trim()) newErrors.name = 'Имя обязательно';
@@ -32,7 +33,22 @@ export default function TeamRequestCard({
       return;
     }
 
-    // Save to storage
+    if (!request.id.startsWith('tr-custom')) {
+      // Database request: save using Server Action
+      const res = await createTeamApplication({
+        teamRequestId: request.id,
+        name: name.trim(),
+        contact: contact.trim(),
+        message: message.trim(),
+      });
+
+      if (!res.success) {
+        setErrors({ message: res.error || 'Ошибка при отправке отклика на сервере' });
+        return;
+      }
+    }
+
+    // Save to LocalStorage as fallback/local history
     saveTeamApplication({
       id: `app-custom-${Date.now()}`,
       requestId: request.id,
@@ -123,7 +139,7 @@ export default function TeamRequestCard({
           </div>
           <div>
             <textarea
-              placeholder="Короткое сообщение о вашем опыте..."
+              placeholder="Короткое сообщение о вашем опрете..."
               value={message}
               rows={2}
               onChange={(e) => {

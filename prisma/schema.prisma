@@ -1,0 +1,93 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id             String           @id
+  name           String?
+  avatar         String?
+  role           String
+  bio            String
+  skills         String           // Comma-separated list of skills
+  createdAt      DateTime         @default(now())
+  ownedProjects  Project[]        @relation("ProjectOwner")
+  memberProjects Project[]        @relation("ProjectMembers")
+  updates        ProgressUpdate[]
+  comments       Comment[]
+}
+
+model Project {
+  id              String           @id
+  title           String
+  description     String
+  longDescription String
+  status          String           // idea, mvp, growth, scaling
+  category        String
+  tags            String           // Comma-separated tags
+  technologies    String           // Comma-separated technologies
+  progress        Int              @default(0)
+  ownerId         String
+  owner           User             @relation("ProjectOwner", fields: [ownerId], references: [id])
+  teamMembers     User[]           @relation("ProjectMembers")
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  links           ProjectLink[]
+  openPositions   TeamRequest[]
+  progressLog     ProgressUpdate[]
+  comments        Comment[]
+}
+
+model ProjectLink {
+  id        String  @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  label     String
+  url       String
+}
+
+model ProgressUpdate {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  content   String
+  type      String   // milestone, update, launch, team
+  createdAt DateTime @default(now())
+}
+
+model TeamRequest {
+  id           String            @id
+  projectId    String
+  project      Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  role         String
+  description  String
+  skills       String            // Comma-separated skills
+  createdAt    DateTime          @default(now())
+  applications TeamApplication[]
+}
+
+model TeamApplication {
+  id            String      @id @default(uuid())
+  teamRequestId String
+  teamRequest   TeamRequest @relation(fields: [teamRequestId], references: [id], onDelete: Cascade)
+  name          String
+  contact       String
+  message       String
+  createdAt     DateTime    @default(now())
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  content   String
+  createdAt DateTime @default(now())
+}

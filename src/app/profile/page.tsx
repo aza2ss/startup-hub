@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { getProjectsByUser, getProgressUpdatesByUser } from '@/lib/api';
+import { getProjects, getProgressUpdates } from '@/lib/actions';
 import { getCurrentUser } from '@/lib/session';
+import { getCustomProjects, getCustomProgressUpdates } from '@/lib/storage';
 import UserProfileCard from '@/components/profile/UserProfileCard';
 import ProjectCard from '@/components/projects/ProjectCard';
 import ProgressUpdateItem from '@/components/progress/ProgressUpdateItem';
@@ -17,12 +18,33 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
       const currUser = getCurrentUser();
       if (currUser) {
         setUser(currUser);
-        setUserProjects(getProjectsByUser(currUser.id));
-        setUserUpdates(getProgressUpdatesByUser(currUser.id));
+
+        // Fetch from DB
+        const dbProjects = await getProjects();
+        const dbUpdates = await getProgressUpdates();
+
+        // Fetch from LocalStorage
+        const localProjects = getCustomProjects();
+        const localUpdates = getCustomProgressUpdates();
+
+        // Merge and filter owned/member projects
+        const allProjects = [...localProjects, ...dbProjects];
+        const filteredProjects = allProjects.filter(
+          (project) =>
+            project.ownerId === currUser.id ||
+            project.teamMembers.some((member) => member.id === currUser.id)
+        );
+
+        // Merge and filter progress updates
+        const allUpdates = [...localUpdates, ...dbUpdates];
+        const filteredUpdates = allUpdates.filter((update) => update.authorId === currUser.id);
+
+        setUserProjects(filteredProjects);
+        setUserUpdates(filteredUpdates);
       }
       setLoading(false);
     }, 0);
@@ -87,7 +109,7 @@ export default function ProfilePage() {
                 <div className="relative pl-4">
                   <div className="absolute left-[5px] top-2 bottom-2 w-px bg-border" />
                   {userUpdates.map((update) => (
-                    <ProgressUpdateItem key={update.id} update={update} />
+                     <ProgressUpdateItem key={update.id} update={update} />
                   ))}
                 </div>
               </div>

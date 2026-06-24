@@ -6,6 +6,7 @@ import type { ProjectStatus, Project } from '@/types';
 import StatusBadge from '@/components/projects/StatusBadge';
 import { getCurrentUser } from '@/lib/session';
 import { saveProject } from '@/lib/storage';
+import { createProject } from '@/lib/actions';
 
 const categoryOptions = [
   'EdTech',
@@ -54,7 +55,7 @@ export default function CreateProjectPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     
     if (!validate()) {
@@ -62,67 +63,84 @@ export default function CreateProjectPage() {
     }
 
     const currentUser = getCurrentUser();
-    const newProjectId = `proj-custom-${Date.now()}`;
+    const ownerId = currentUser?.id || 'user-current';
 
-    // Process tags
-    const tagsArray = form.tags
-      .split(',')
-      .map((t) => t.trim())
-      .filter((t) => t.length > 0);
+    setSubmitted(true);
 
-    // Process roles into open positions
-    const rolesArray = form.roles
-      .split(',')
-      .map((r) => r.trim())
-      .filter((r) => r.length > 0);
-
-    const openPositions = rolesArray.map((role, index) => ({
-      id: `tr-custom-${Date.now()}-${index}`,
-      projectId: newProjectId,
-      projectTitle: form.title,
-      role,
-      description: `Ищем специалиста на роль ${role} для участия в разработке проекта.`,
-      skills: [],
-      createdAt: new Date().toISOString(),
-    }));
-
-    const newProject: Project = {
-      id: newProjectId,
+    // Save to database
+    const res = await createProject({
       title: form.title,
       description: form.description,
       longDescription: form.longDescription,
       status: form.status,
       category: form.category,
-      tags: tagsArray,
-      technologies: [],
-      teamMembers: currentUser ? [currentUser] : [],
-      ownerId: currentUser?.id || 'user-current',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      progress: 10,
-      links: [],
-      openPositions: openPositions,
-      progressLog: [
-        {
-          id: `pu-custom-${Date.now()}`,
-          projectId: newProjectId,
-          authorId: currentUser?.id || 'user-current',
-          authorName: currentUser?.name || 'Основатель проекта',
-          authorAvatar: null,
-          content: 'Проект создан на платформе StartupHub! Начинаем поиск команды и первых единомышленников.',
-          type: 'launch',
-          createdAt: new Date().toISOString(),
-        },
-      ],
-      comments: [],
-    };
+      tags: form.tags,
+      roles: form.roles,
+      ownerId,
+    });
 
-    saveProject(newProject);
-    setSubmitted(true);
+    if (res.success && res.projectId) {
+      // Synchronize with LocalStorage cache/fallback
+      const tagsArray = form.tags
+        .split(',')
+        .map((t) => t.trim())
+        .filter((t) => t.length > 0);
 
-    setTimeout(() => {
-      router.push(`/projects/${newProjectId}`);
-    }, 1500);
+      const rolesArray = form.roles
+        .split(',')
+        .map((r) => r.trim())
+        .filter((r) => r.length > 0);
+
+      const openPositions = rolesArray.map((role, index) => ({
+        id: `tr-custom-${Date.now()}-${index}`,
+        projectId: res.projectId ?? '',
+        projectTitle: form.title,
+        role,
+        description: `Ищем специалиста на роль ${role} для участия в разработке проекта.`,
+        skills: [],
+        createdAt: new Date().toISOString(),
+      }));
+
+      const newProject: Project = {
+        id: res.projectId,
+        title: form.title,
+        description: form.description,
+        longDescription: form.longDescription,
+        status: form.status,
+        category: form.category,
+        tags: tagsArray,
+        technologies: [],
+        teamMembers: currentUser ? [currentUser] : [],
+        ownerId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        progress: 10,
+        links: [],
+        openPositions: openPositions,
+        progressLog: [
+          {
+            id: `pu-custom-${Date.now()}`,
+            projectId: res.projectId,
+            authorId: ownerId,
+            authorName: currentUser?.name || 'Основатель проекта',
+            authorAvatar: null,
+            content: 'Проект создан на платформе StartupHub! Начинаем поиск команды и первых единомышленников.',
+            type: 'launch',
+            createdAt: new Date().toISOString(),
+          },
+        ],
+        comments: [],
+      };
+
+      saveProject(newProject);
+
+      setTimeout(() => {
+        router.push(`/projects/${res.projectId}`);
+      }, 1500);
+    } else {
+      setSubmitted(false);
+      setErrors({ server: res.error || 'Ошибка при сохранении проекта на сервере' });
+    }
   };
 
   const updateField = (field: string, value: string) => {
@@ -130,6 +148,9 @@ export default function CreateProjectPage() {
     // Clear error for field when typing
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: '' }));
+    }
+    if (errors.server) {
+      setErrors((prev) => ({ ...prev, server: '' }));
     }
   };
 
@@ -143,10 +164,18 @@ export default function CreateProjectPage() {
         </p>
       </div>
 
-      {submitted && (
+      {errors.server && (
         <div className="card p-4 border-primary bg-primary-light">
           <p className="text-sm text-primary font-bold">
-            ✓ Проект успешно создан! Перенаправление на страницу проекта...
+            ⚠ {errors.server}
+          </p>
+        </div>
+      )}
+
+      {submitted && !errors.server && (
+        <div className="card p-4 border-primary bg-primary-light">
+          <p className="text-sm text-primary font-bold">
+            ✓ Проект успешно опубликован на сервере! Перенаправление...
           </p>
         </div>
       )}

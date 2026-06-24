@@ -2,7 +2,8 @@
 
 import { use, useState, useEffect } from 'react';
 import { notFound } from 'next/navigation';
-import { getProjectById } from '@/lib/api';
+import { getProjectById, createProgressUpdate } from '@/lib/actions';
+import { getCustomProjects, getCustomProgressUpdates, saveProgressUpdate } from '@/lib/storage';
 import { formatLongDate } from '@/lib/format';
 import StatusBadge from '@/components/projects/StatusBadge';
 import ProgressLog from '@/components/progress/ProgressLog';
@@ -10,9 +11,6 @@ import TeamRequestCard from '@/components/team/TeamRequestCard';
 import { UserAvatar } from '@/components/ui/Avatar';
 import type { Project, ProgressUpdate } from '@/types';
 import { getCurrentUser } from '@/lib/session';
-import { saveProgressUpdate } from '@/lib/storage';
-
-type ProgressUpdateType = ProgressUpdate['type'];
 
 export default function ProjectPage({
   params,
@@ -25,14 +23,34 @@ export default function ProjectPage({
 
   // Form state
   const [content, setContent] = useState('');
-  const [updateType, setUpdateType] = useState<ProgressUpdateType>('update');
+  const [updateType, setUpdateType] = useState<'update' | 'milestone' | 'launch' | 'team'>('update');
   const [formError, setFormError] = useState('');
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      const proj = getProjectById(id);
-      setProject(proj || null);
+    const timer = setTimeout(async () => {
+      // 1. Fetch from DB
+      const dbProj = await getProjectById(id);
+      // 2. Fetch local storage updates matching this project
+      const localUpdates = getCustomProgressUpdates().filter((u) => u.projectId === id);
+
+      if (dbProj) {
+        setProject({
+          ...dbProj,
+          progressLog: [...localUpdates, ...dbProj.progressLog],
+        });
+      } else {
+        // 3. Fallback to LocalStorage custom projects
+        const localProj = getCustomProjects().find((p) => p.id === id);
+        if (localProj) {
+          setProject({
+            ...localProj,
+            progressLog: [...localUpdates, ...localProj.progressLog],
+          });
+        } else {
+          setProject(null);
+        }
+      }
       setLoading(false);
     }, 0);
     return () => clearTimeout(timer);
@@ -46,7 +64,7 @@ export default function ProjectPage({
     notFound();
   }
 
-  const handleAddUpdate = (e: React.FormEvent) => {
+  const handleAddUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim()) {
       setFormError('Текст обновления не может быть пустым');
@@ -54,27 +72,53 @@ export default function ProjectPage({
     }
 
     const currentUser = getCurrentUser();
+    const authorId = currentUser?.id || 'user-current';
+    const authorName = currentUser?.name || 'Основатель проекта';
+
     const newUpdate: ProgressUpdate = {
       id: `pu-custom-${Date.now()}`,
       projectId: project.id,
-      authorId: currentUser?.id || 'user-current',
-      authorName: currentUser?.name || 'Основатель проекта',
+      authorId,
+      authorName,
       authorAvatar: null,
       content: content.trim(),
       type: updateType,
       createdAt: new Date().toISOString(),
     };
 
-    saveProgressUpdate(newUpdate);
+    if (!project.id.startsWith('proj-custom')) {
+      // Database project: save using Server Action
+      const res = await createProgressUpdate({
+        projectId: project.id,
+        authorId,
+        content: content.trim(),
+        type: updateType,
+      });
 
-    // Update state to render immediately
-    setProject((prev) => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        progressLog: [newUpdate, ...prev.progressLog],
-      };
-    });
+      if (res.success && res.update) {
+        const dbUpdate = res.update;
+        setProject((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            progressLog: [dbUpdate, ...prev.progressLog],
+          };
+        });
+      } else {
+        setFormError(res.error || 'Ошибка при сохранении обновления на сервере');
+        return;
+      }
+    } else {
+      // LocalStorage project: save locally
+      saveProgressUpdate(newUpdate);
+      setProject((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          progressLog: [newUpdate, ...prev.progressLog],
+        };
+      });
+    }
 
     setContent('');
     setFormError('');
@@ -130,7 +174,7 @@ export default function ProjectPage({
                   <span className="text-xs text-muted">Тип:</span>
                   <select
                     value={updateType}
-                    onChange={(e) => setUpdateType(e.target.value as ProgressUpdateType)}
+                    onChange={(e) => setUpdateType(e.target.value as 'update' | 'milestone' | 'launch' | 'team')}
                     className="input-field py-1 px-2 text-xs w-auto"
                   >
                     <option value="update">Обновление</option>

@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { getProjects } from '@/lib/api';
+import { getProjects } from '@/lib/actions';
+import { getCustomProjects } from '@/lib/storage';
 import type { Project, ProjectStatus } from '@/types';
 import ProjectCard from '@/components/projects/ProjectCard';
 import StatusBadge from '@/components/projects/StatusBadge';
@@ -21,8 +22,10 @@ export default function ProjectsPage() {
   const [selectedStatus, setSelectedStatus] = useState<ProjectStatus | 'all'>('all');
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setProjects(getProjects());
+    const timer = setTimeout(async () => {
+      const dbProjs = await getProjects();
+      const localProjs = getCustomProjects();
+      setProjects([...localProjs, ...dbProjs]);
     }, 0);
     return () => clearTimeout(timer);
   }, []);
@@ -98,10 +101,12 @@ export default function ProjectsPage() {
           ))}
         </div>
       ) : (
-        <EmptyState
-          title="Проекты не найдены"
-          description="Попробуйте изменить фильтр или поисковый запрос"
-        />
+        <div className="glass-card p-12 text-center">
+          <EmptyState
+            title="Проекты не найдены"
+            description="Попробуйте изменить фильтр или поисковый запрос"
+          />
+        </div>
       )}
     </div>
   );

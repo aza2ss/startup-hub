@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { getTeamRequests } from '@/lib/api';
+import { getTeamRequests } from '@/lib/actions';
+import { getCustomProjects } from '@/lib/storage';
 import TeamRequestCard from '@/components/team/TeamRequestCard';
 import EmptyState from '@/components/ui/EmptyState';
 import type { TeamRequest } from '@/types';
@@ -12,8 +13,23 @@ export default function TeamPage() {
   const [selectedRole, setSelectedRole] = useState('all');
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setTeamRequests(getTeamRequests());
+    const timer = setTimeout(async () => {
+      const dbRequests = await getTeamRequests();
+      
+      const localProjects = getCustomProjects();
+      const localRequests: TeamRequest[] = [];
+      localProjects.forEach((project) => {
+        if (project.openPositions) {
+          project.openPositions.forEach((pos) => {
+            localRequests.push({
+              ...pos,
+              projectTitle: project.title,
+            });
+          });
+        }
+      });
+
+      setTeamRequests([...localRequests, ...dbRequests]);
     }, 0);
     return () => clearTimeout(timer);
   }, []);
