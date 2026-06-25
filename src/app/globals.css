@@ -13,7 +13,7 @@
   --color-muted-light: #9c958b;
   --color-surface: #efede8;
   --color-sidebar: #ffffff;
-  --font-sans: Arial, Helvetica, sans-serif;
+  --font-sans: var(--font-manrope, sans-serif);
   --font-mono: "Courier New", Courier, monospace;
   --color-status-idea: #a16207;
   --color-status-mvp: #1f5f8b;
@@ -29,7 +29,7 @@
 body {
   background: var(--color-background);
   color: var(--color-foreground);
-  font-family: var(--font-sans);
+  font-family: var(--font-manrope, sans-serif);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
 }
