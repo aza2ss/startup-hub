@@ -4,11 +4,26 @@
 import { prisma } from './prisma';
 import type { Project, ProgressUpdate, TeamRequest, ProjectStatus } from '@/types';
 
+// Convert DB User to frontend User type
+function mapDbUser(dbUser: any): import('@/types').User {
+  return {
+    id: dbUser.id,
+    name: dbUser.name,
+    avatar: dbUser.avatar,
+    role: dbUser.role,
+    bio: dbUser.bio ?? '',
+    skills: dbUser.skills ? dbUser.skills.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
+    projectIds: [],
+    createdAt: dbUser.createdAt instanceof Date ? dbUser.createdAt.toISOString() : dbUser.createdAt,
+  };
+}
+
 // Convert database Project to frontend Project type
 function mapDbProject(dbProj: any): Project {
+  const title = dbProj.title;
   return {
     id: dbProj.id,
-    title: dbProj.title,
+    title,
     description: dbProj.description,
     longDescription: dbProj.longDescription,
     status: dbProj.status as ProjectStatus,
@@ -19,11 +34,16 @@ function mapDbProject(dbProj: any): Project {
     ownerId: dbProj.ownerId,
     createdAt: dbProj.createdAt.toISOString(),
     updatedAt: dbProj.updatedAt.toISOString(),
-    teamMembers: dbProj.teamMembers || [],
-    links: dbProj.links || [],
+    teamMembers: dbProj.teamMembers ? dbProj.teamMembers.map(mapDbUser) : [],
+    links: (dbProj.links || []).map((l: any) => ({ label: l.label, url: l.url })),
     openPositions: dbProj.openPositions ? dbProj.openPositions.map((op: any) => ({
-      ...op,
-      createdAt: op.createdAt.toISOString(),
+      id: op.id,
+      projectId: op.projectId,
+      projectTitle: title,
+      role: op.role,
+      description: op.description,
+      skills: op.skills ? op.skills.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
+      createdAt: op.createdAt instanceof Date ? op.createdAt.toISOString() : op.createdAt,
     })) : [],
     progressLog: dbProj.progressLog ? dbProj.progressLog.map((pl: any) => ({
       id: pl.id,
@@ -33,9 +53,16 @@ function mapDbProject(dbProj: any): Project {
       authorAvatar: pl.author ? pl.author.avatar : null,
       content: pl.content,
       type: pl.type,
-      createdAt: pl.createdAt.toISOString(),
+      createdAt: pl.createdAt instanceof Date ? pl.createdAt.toISOString() : pl.createdAt,
     })) : [],
-    comments: dbProj.comments || [],
+    comments: dbProj.comments ? dbProj.comments.map((c: any) => ({
+      id: c.id,
+      projectId: c.projectId,
+      authorId: c.authorId,
+      authorName: c.author ? c.author.name : null,
+      content: c.content,
+      createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : c.createdAt,
+    })) : [],
   };
 }
 
@@ -48,6 +75,14 @@ export async function getProjects(): Promise<Project[]> {
         links: true,
         openPositions: true,
         progressLog: {
+          include: {
+            author: true,
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        },
+        comments: {
           include: {
             author: true,
           },
@@ -77,6 +112,14 @@ export async function getProjectById(id: string): Promise<Project | null> {
         links: true,
         openPositions: true,
         progressLog: {
+          include: {
+            author: true,
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        },
+        comments: {
           include: {
             author: true,
           },

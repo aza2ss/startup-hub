@@ -5,8 +5,8 @@ export const CURRENT_USER_ID = 'user-current';
 export const users: User[] = [
   {
     id: CURRENT_USER_ID,
-    name: null,
-    avatar: null,
+    name: 'Алексей Петров',
+    avatar: 'https://i.pravatar.cc/150?img=11',
     role: 'Основатель проекта',
     bio: 'Профиль пока не заполнен. Добавьте информацию о себе, навыках и проектах.',
     skills: [],
@@ -15,8 +15,8 @@ export const users: User[] = [
   },
   {
     id: 'user-2',
-    name: null,
-    avatar: null,
+    name: 'Мария Иванова',
+    avatar: 'https://i.pravatar.cc/150?img=20',
     role: 'Frontend-разработчик',
     bio: 'Работает с React, TypeScript и интерфейсами для внутренних продуктов.',
     skills: ['React', 'TypeScript', 'Tailwind CSS'],
@@ -25,8 +25,8 @@ export const users: User[] = [
   },
   {
     id: 'user-3',
-    name: null,
-    avatar: null,
+    name: 'Дмитрий Козлов',
+    avatar: 'https://i.pravatar.cc/150?img=33',
     role: 'Product/UI дизайнер',
     bio: 'Проектирует веб и мобильные интерфейсы для early-stage продуктов.',
     skills: ['Figma', 'UX Research', 'UI Design'],
@@ -35,8 +35,8 @@ export const users: User[] = [
   },
   {
     id: 'user-4',
-    name: null,
-    avatar: null,
+    name: 'Анна Смирнова',
+    avatar: 'https://i.pravatar.cc/150?img=47',
     role: 'Backend-разработчик',
     bio: 'Node.js, PostgreSQL, REST API, интеграции платежей.',
     skills: ['Node.js', 'PostgreSQL', 'REST API'],
