@@ -2,6 +2,7 @@
 'use server';
 
 import { prisma } from './prisma';
+import { getCurrentUserId } from './session';
 import type { Project, ProgressUpdate, TeamRequest, ProjectStatus } from '@/types';
 
 // Convert DB User to frontend User type
@@ -9,7 +10,7 @@ function mapDbUser(dbUser: any): import('@/types').User {
   return {
     id: dbUser.id,
     name: dbUser.name,
-    avatar: dbUser.avatar,
+    avatar: dbUser.avatar ?? dbUser.image ?? null,
     role: dbUser.role,
     bio: dbUser.bio ?? '',
     skills: dbUser.skills ? dbUser.skills.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
@@ -144,9 +145,14 @@ export async function createProject(data: {
   category: string;
   tags: string;
   roles: string;
-  ownerId: string;
 }): Promise<{ success: boolean; projectId?: string; error?: string }> {
   try {
+    // Auth check: ownerId comes from session, not from form
+    const ownerId = await getCurrentUserId();
+    if (!ownerId) {
+      return { success: false, error: 'Необходимо авторизоваться для создания проекта' };
+    }
+
     // Base server validation
     if (!data.title || data.title.trim().length < 3) {
       return { success: false, error: 'Название проекта должно быть не менее 3 символов' };
@@ -175,9 +181,9 @@ export async function createProject(data: {
         tags: data.tags,
         technologies: '',
         progress: 10,
-        ownerId: data.ownerId,
+        ownerId: ownerId,
         teamMembers: {
-          connect: { id: data.ownerId },
+          connect: { id: ownerId },
         },
         openPositions: {
           create: rolesArray.map((role) => ({
@@ -190,7 +196,7 @@ export async function createProject(data: {
         progressLog: {
           create: {
             id: `pu-${Date.now()}`,
-            authorId: data.ownerId,
+            authorId: ownerId,
             content: 'Проект создан на платформе StartupHub! Начинаем поиск команды и первых единомышленников.',
             type: 'launch',
           },
@@ -207,11 +213,16 @@ export async function createProject(data: {
 
 export async function createProgressUpdate(data: {
   projectId: string;
-  authorId: string;
   content: string;
   type: string;
 }): Promise<{ success: boolean; update?: ProgressUpdate; error?: string }> {
   try {
+    // Auth check
+    const authorId = await getCurrentUserId();
+    if (!authorId) {
+      return { success: false, error: 'Необходимо авторизоваться' };
+    }
+
     if (!data.content.trim()) {
       return { success: false, error: 'Текст обновления не может быть пустым' };
     }
@@ -221,7 +232,7 @@ export async function createProgressUpdate(data: {
       data: {
         id: updateId,
         projectId: data.projectId,
-        authorId: data.authorId,
+        authorId: authorId,
         content: data.content.trim(),
         type: data.type,
       },
@@ -306,6 +317,12 @@ export async function createTeamApplication(data: {
   message: string;
 }): Promise<{ success: boolean; error?: string }> {
   try {
+    // Auth check
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return { success: false, error: 'Необходимо авторизоваться для отклика' };
+    }
+
     if (!data.name.trim()) return { success: false, error: 'Имя обязательно' };
     if (!data.contact.trim()) return { success: false, error: 'Контакты обязательны' };
     if (!data.message.trim()) return { success: false, error: 'Сообщение обязательно' };
@@ -323,5 +340,47 @@ export async function createTeamApplication(data: {
   } catch (error: any) {
     console.error('Failed to create team application in DB:', error);
     return { success: false, error: error.message || 'Ошибка отправки отклика' };
+  }
+}
+
+export async function getUserProfile(userId: string): Promise<import('@/types').User | null> {
+  try {
+    const dbUser = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!dbUser) return null;
+    return mapDbUser(dbUser);
+  } catch (error) {
+    console.error(`Failed to fetch user profile ${userId}:`, error);
+    return null;
+  }
+}
+
+export async function updateUserProfile(data: {
+  name: string;
+  role: string;
+  bio: string;
+  skills: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return { success: false, error: 'Необходимо авторизоваться' };
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        name: data.name.trim(),
+        role: data.role.trim(),
+        bio: data.bio.trim(),
+        skills: data.skills.trim(),
+      },
+    });
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Failed to update user profile:', error);
+    return { success: false, error: error.message || 'Ошибка обновления профиля' };
   }
 }

@@ -3,8 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import Avatar from '@/components/ui/Avatar';
-import { getCurrentUser } from '@/lib/session';
+import AuthButton from '@/components/AuthButton';
 
 const navLinks = [
   { href: '/', label: 'Лента', exact: true },
@@ -21,7 +20,6 @@ function isActive(pathname: string, href: string, exact: boolean) {
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const currentUser = getCurrentUser();
 
   return (
     <div className="min-h-screen flex">
@@ -85,15 +83,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
           <div className="hidden lg:block" />
 
-          <Link
-            href="/profile"
-            className="flex items-center gap-2 px-2 py-1 border border-transparent hover:border-border hover:bg-white transition-colors"
-          >
-            <Avatar name={currentUser?.name} avatar={currentUser?.avatar} size="sm" />
-            <span className="hidden sm:block meta-text">
-              {currentUser?.name ?? 'Профиль'}
-            </span>
-          </Link>
+          <AuthButton />
         </header>
 
         {mobileOpen && (

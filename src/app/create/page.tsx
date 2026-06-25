@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession, signIn } from 'next-auth/react';
 import type { ProjectStatus, Project } from '@/types';
 import StatusBadge from '@/components/projects/StatusBadge';
-import { getCurrentUser } from '@/lib/session';
 import { saveProject } from '@/lib/storage';
 import { createProject } from '@/lib/actions';
 
@@ -20,6 +20,7 @@ const statusOptions: ProjectStatus[] = ['idea', 'mvp', 'growth', 'scaling'];
 
 export default function CreateProjectPage() {
   const router = useRouter();
+  const { data: session, status: authStatus } = useSession();
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -62,12 +63,9 @@ export default function CreateProjectPage() {
       return;
     }
 
-    const currentUser = getCurrentUser();
-    const ownerId = currentUser?.id || 'user-current';
-
     setSubmitted(true);
 
-    // Save to database
+    // Save to database (ownerId is determined server-side from session)
     const res = await createProject({
       title: form.title,
       description: form.description,
@@ -76,7 +74,6 @@ export default function CreateProjectPage() {
       category: form.category,
       tags: form.tags,
       roles: form.roles,
-      ownerId,
     });
 
     if (res.success && res.projectId) {
@@ -101,6 +98,7 @@ export default function CreateProjectPage() {
         createdAt: new Date().toISOString(),
       }));
 
+      const ownerId = session?.user?.id ?? 'unknown';
       const newProject: Project = {
         id: res.projectId,
         title: form.title,
@@ -110,7 +108,16 @@ export default function CreateProjectPage() {
         category: form.category,
         tags: tagsArray,
         technologies: [],
-        teamMembers: currentUser ? [currentUser] : [],
+        teamMembers: session?.user ? [{
+          id: session.user.id!,
+          name: session.user.name ?? null,
+          avatar: session.user.image ?? null,
+          role: 'Основатель проекта',
+          bio: '',
+          skills: [],
+          projectIds: [],
+          createdAt: new Date().toISOString(),
+        }] : [],
         ownerId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -122,7 +129,7 @@ export default function CreateProjectPage() {
             id: `pu-custom-${Date.now()}`,
             projectId: res.projectId,
             authorId: ownerId,
-            authorName: currentUser?.name || 'Основатель проекта',
+            authorName: session?.user?.name || 'Основатель проекта',
             authorAvatar: null,
             content: 'Проект создан на платформе StartupHub! Начинаем поиск команды и первых единомышленников.',
             type: 'launch',
@@ -163,6 +170,15 @@ export default function CreateProjectPage() {
           Опишите проект и укажите, кого ищете в команду
         </p>
       </div>
+
+      {authStatus !== 'loading' && !session?.user && (
+        <div className="card p-5 text-center space-y-3">
+          <p className="text-sm text-muted">Для создания проекта необходимо войти в аккаунт</p>
+          <button type="button" onClick={() => signIn()} className="btn-primary text-sm">
+            Войти
+          </button>
+        </div>
+      )}
 
       {errors.server && (
         <div className="card p-4 border-primary bg-primary-light">

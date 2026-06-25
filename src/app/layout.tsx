@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import AppShell from '@/components/layout/AppShell';
+import SessionProvider from '@/components/providers/SessionProvider';
 
 export const metadata: Metadata = {
   title: 'StartupHub - платформа для стартап-команд',
@@ -15,7 +16,9 @@ export default function RootLayout({
   return (
     <html lang="ru" className="h-full antialiased">
       <body className="min-h-full bg-background text-foreground">
-        <AppShell>{children}</AppShell>
+        <SessionProvider>
+          <AppShell>{children}</AppShell>
+        </SessionProvider>
       </body>
     </html>
   );

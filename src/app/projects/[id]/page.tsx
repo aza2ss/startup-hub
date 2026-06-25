@@ -10,7 +10,7 @@ import ProgressLog from '@/components/progress/ProgressLog';
 import TeamRequestCard from '@/components/team/TeamRequestCard';
 import { UserAvatar } from '@/components/ui/Avatar';
 import type { Project, ProgressUpdate } from '@/types';
-import { getCurrentUser } from '@/lib/session';
+import { useSession } from 'next-auth/react';
 
 export default function ProjectPage({
   params,
@@ -20,6 +20,7 @@ export default function ProjectPage({
   const { id } = use(params);
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
+  const { data: session } = useSession();
 
   // Form state
   const [content, setContent] = useState('');
@@ -71,16 +72,16 @@ export default function ProjectPage({
       return;
     }
 
-    const currentUser = getCurrentUser();
-    const authorId = currentUser?.id || 'user-current';
-    const authorName = currentUser?.name || 'Основатель проекта';
+    const authorId = session?.user?.id || 'user-current';
+    const authorName = session?.user?.name || 'Основатель проекта';
+    const authorAvatar = session?.user?.image || null;
 
     const newUpdate: ProgressUpdate = {
       id: `pu-custom-${Date.now()}`,
       projectId: project.id,
       authorId,
       authorName,
-      authorAvatar: null,
+      authorAvatar,
       content: content.trim(),
       type: updateType,
       createdAt: new Date().toISOString(),
@@ -90,7 +91,6 @@ export default function ProjectPage({
       // Database project: save using Server Action
       const res = await createProgressUpdate({
         projectId: project.id,
-        authorId,
         content: content.trim(),
         type: updateType,
       });
