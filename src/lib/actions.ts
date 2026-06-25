@@ -67,9 +67,14 @@ function mapDbProject(dbProj: any): Project {
   };
 }
 
-export async function getProjects(): Promise<Project[]> {
+export async function getProjects(filter?: { ownerId?: string }): Promise<Project[]> {
   try {
+    const where: any = {};
+    if (filter?.ownerId) {
+      where.ownerId = filter.ownerId;
+    }
     const dbProjects = await prisma.project.findMany({
+      where,
       include: {
         owner: true,
         teamMembers: true,
@@ -259,9 +264,14 @@ export async function createProgressUpdate(data: {
   }
 }
 
-export async function getProgressUpdates(): Promise<ProgressUpdate[]> {
+export async function getProgressUpdates(filter?: { authorId?: string }): Promise<ProgressUpdate[]> {
   try {
+    const where: any = {};
+    if (filter?.authorId) {
+      where.authorId = filter.authorId;
+    }
     const dbUpdates = await prisma.progressUpdate.findMany({
+      where,
       include: {
         author: true,
       },

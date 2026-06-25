@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSession, signIn } from 'next-auth/react';
-import { getProjects, getProgressUpdates, getUserProfile, updateUserProfile } from '@/lib/actions';
+import { getProjects, getProgressUpdates, updateUserProfile } from '@/lib/actions';
+import { getCurrentUser } from '@/lib/session';
 import { getCustomProjects, getCustomProgressUpdates } from '@/lib/storage';
 import UserProfileCard from '@/components/profile/UserProfileCard';
 import ProjectCard from '@/components/projects/ProjectCard';
@@ -36,7 +37,7 @@ export default function ProfilePage() {
 
     const fetchData = async () => {
       // Try to fetch actual DB profile, fallback to session info
-      const dbProfile = await getUserProfile(session.user!.id!);
+      const dbProfile = await getCurrentUser();
       const currUser: User = dbProfile || {
         id: session.user!.id!,
         name: session.user!.name ?? null,
@@ -50,24 +51,20 @@ export default function ProfilePage() {
       setUser(currUser);
 
       // Fetch from DB
-      const dbProjects = await getProjects();
-      const dbUpdates = await getProgressUpdates();
+      const dbProjects = await getProjects({ ownerId: currUser.id });
+      const dbUpdates = await getProgressUpdates({ authorId: currUser.id });
 
       // Fetch from LocalStorage
       const localProjects = getCustomProjects();
       const localUpdates = getCustomProgressUpdates();
 
       // Merge and filter owned/member projects
-      const allProjects = [...localProjects, ...dbProjects];
-      const filteredProjects = allProjects.filter(
-        (project) =>
-          project.ownerId === currUser.id ||
-          project.teamMembers.some((member) => member.id === currUser.id)
-      );
+      const filteredLocalProjects = localProjects.filter((project) => project.ownerId === currUser.id);
+      const filteredProjects = [...filteredLocalProjects, ...dbProjects];
 
       // Merge and filter progress updates
-      const allUpdates = [...localUpdates, ...dbUpdates];
-      const filteredUpdates = allUpdates.filter((update) => update.authorId === currUser.id);
+      const filteredLocalUpdates = localUpdates.filter((update) => update.authorId === currUser.id);
+      const filteredUpdates = [...filteredLocalUpdates, ...dbUpdates];
 
       setUserProjects(filteredProjects);
       setUserUpdates(filteredUpdates);
@@ -121,7 +118,7 @@ export default function ProfilePage() {
 
     if (res.success) {
       setEditSuccess(true);
-      const dbProfile = await getUserProfile(user.id);
+      const dbProfile = await getCurrentUser();
       if (dbProfile) {
         setUser(dbProfile);
       }
@@ -249,8 +246,7 @@ export default function ProfilePage() {
               </div>
             ) : (
               <EmptyState
-                title="Проектов пока нет"
-                description="Создайте первый проект на платформе"
+                title="У вас пока нет проектов"
                 action={
                   <Link href="/create" className="btn-primary text-sm inline-block mt-2">
                     Создать проект
@@ -273,8 +269,7 @@ export default function ProfilePage() {
               </div>
             ) : (
               <EmptyState
-                title="Обновлений нет"
-                description="Добавьте progress log в своих проектах"
+                title="Активность появится после первого обновления проекта"
               />
             )}
           </section>
