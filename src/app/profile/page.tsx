@@ -31,8 +31,10 @@ export default function ProfilePage() {
     if (authStatus === 'loading') return;
 
     if (!session?.user?.id) {
-      setLoading(false);
-      return;
+      const timer = setTimeout(() => {
+        setLoading(false);
+      }, 0);
+      return () => clearTimeout(timer);
     }
 
     const fetchData = async () => {
