@@ -279,7 +279,7 @@ export async function getProgressUpdates(filter?: { authorId?: string }): Promis
         createdAt: 'desc',
       },
     });
-    return dbUpdates.map((u) => ({
+    return dbUpdates.map((u: any) => ({
       id: u.id,
       projectId: u.projectId,
       authorId: u.authorId,
@@ -305,13 +305,13 @@ export async function getTeamRequests(): Promise<TeamRequest[]> {
         createdAt: 'desc',
       },
     });
-    return dbRequests.map((r) => ({
+    return dbRequests.map((r: any) => ({
       id: r.id,
       projectId: r.projectId,
       projectTitle: r.project.title,
       role: r.role,
       description: r.description,
-      skills: r.skills ? r.skills.split(',').map((s) => s.trim()).filter(Boolean) : [],
+      skills: r.skills ? r.skills.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
       createdAt: r.createdAt.toISOString(),
     }));
   } catch (error) {
