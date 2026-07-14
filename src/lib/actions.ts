@@ -3,7 +3,7 @@
 
 import { prisma } from './prisma';
 import { getCurrentUserId } from './session';
-import type { Project, ProgressUpdate, TeamRequest, ProjectStatus } from '@/types';
+import type { Project, ProgressUpdate, TeamRequest, ProjectStatus, Comment } from '@/types';
 
 // Convert DB User to frontend User type
 function mapDbUser(dbUser: any): import('@/types').User {
@@ -16,6 +16,22 @@ function mapDbUser(dbUser: any): import('@/types').User {
     skills: dbUser.skills ? dbUser.skills.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
     projectIds: [],
     createdAt: dbUser.createdAt instanceof Date ? dbUser.createdAt.toISOString() : dbUser.createdAt,
+  };
+}
+
+function mapDbComment(c: any): Comment {
+  return {
+    id: c.id,
+    projectId: c.projectId,
+    progressUpdateId: c.progressUpdateId,
+    authorId: c.authorId,
+    authorName: c.author ? c.author.name : null,
+    authorAvatar: c.author ? (c.author.avatar ?? c.author.image) : null,
+    content: c.content,
+    parentId: c.parentId,
+    replies: c.replies ? c.replies.map(mapDbComment) : [],
+    createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : c.createdAt,
+    updatedAt: c.updatedAt instanceof Date ? c.updatedAt.toISOString() : c.updatedAt,
   };
 }
 
@@ -56,14 +72,7 @@ function mapDbProject(dbProj: any): Project {
       type: pl.type,
       createdAt: pl.createdAt instanceof Date ? pl.createdAt.toISOString() : pl.createdAt,
     })) : [],
-    comments: dbProj.comments ? dbProj.comments.map((c: any) => ({
-      id: c.id,
-      projectId: c.projectId,
-      authorId: c.authorId,
-      authorName: c.author ? c.author.name : null,
-      content: c.content,
-      createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : c.createdAt,
-    })) : [],
+    comments: dbProj.comments ? dbProj.comments.map(mapDbComment) : [],
     followersCount: dbProj._count?.follows ?? 0,
     savedCount: dbProj._count?.savedBy ?? 0,
   };
@@ -91,8 +100,17 @@ export async function getProjects(filter?: { ownerId?: string }): Promise<Projec
           },
         },
         comments: {
+          where: { parentId: null },
           include: {
             author: true,
+            replies: {
+              include: {
+                author: true,
+              },
+              orderBy: {
+                createdAt: 'asc',
+              },
+            },
           },
           orderBy: {
             createdAt: 'desc',
@@ -134,8 +152,17 @@ export async function getProjectById(id: string): Promise<Project | null> {
           },
         },
         comments: {
+          where: { parentId: null },
           include: {
             author: true,
+            replies: {
+              include: {
+                author: true,
+              },
+              orderBy: {
+                createdAt: 'asc',
+              },
+            },
           },
           orderBy: {
             createdAt: 'desc',
@@ -748,5 +775,221 @@ export async function getSavedProjects(): Promise<Project[]> {
 
   return dbSaved.map(s => mapDbProject(s.project));
 }
+
+export async function getProjectComments(projectId: string): Promise<Comment[]> {
+  try {
+    const dbComments = await prisma.comment.findMany({
+      where: {
+        projectId,
+        parentId: null,
+        progressUpdateId: null,
+      },
+      include: {
+        author: true,
+        replies: {
+          include: {
+            author: true,
+          },
+          orderBy: {
+            createdAt: 'asc',
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+    return dbComments.map(mapDbComment);
+  } catch (error) {
+    console.error(`Failed to fetch comments for project ${projectId}:`, error);
+    return [];
+  }
+}
+
+export async function createProjectComment(
+  projectId: string,
+  content: string
+): Promise<{ success: boolean; comment?: Comment; error?: string }> {
+  try {
+    const authorId = await getCurrentUserId();
+    if (!authorId) return { success: false, error: 'Необходимо авторизоваться для комментирования' };
+
+    const cleanContent = content.trim();
+    if (!cleanContent) return { success: false, error: 'Комментарий не может быть пустым' };
+    if (cleanContent.length > 1000) {
+      return { success: false, error: 'Максимальная длина комментария — 1000 символов' };
+    }
+
+    const dbComment = await prisma.comment.create({
+      data: {
+        projectId,
+        authorId,
+        content: cleanContent,
+      },
+      include: {
+        author: true,
+        replies: {
+          include: {
+            author: true,
+          },
+        },
+      },
+    });
+    return { success: true, comment: mapDbComment(dbComment) };
+  } catch (error: any) {
+    console.error('Failed to create project comment:', error);
+    return { success: false, error: 'Не удалось отправить комментарий' };
+  }
+}
+
+export async function createProgressUpdateComment(
+  progressUpdateId: string,
+  content: string
+): Promise<{ success: boolean; comment?: Comment; error?: string }> {
+  try {
+    const authorId = await getCurrentUserId();
+    if (!authorId) return { success: false, error: 'Необходимо авторизоваться для комментирования' };
+
+    const cleanContent = content.trim();
+    if (!cleanContent) return { success: false, error: 'Комментарий не может быть пустым' };
+    if (cleanContent.length > 1000) return { success: false, error: 'Комментарий слишком длинный' };
+
+    const progressUpdate = await prisma.progressUpdate.findUnique({
+      where: { id: progressUpdateId },
+    });
+    if (!progressUpdate) return { success: false, error: 'Обновление прогресса не найдено' };
+
+    const dbComment = await prisma.comment.create({
+      data: {
+        projectId: progressUpdate.projectId,
+        progressUpdateId,
+        authorId,
+        content: cleanContent,
+      },
+      include: {
+        author: true,
+        replies: {
+          include: {
+            author: true,
+          },
+        },
+      },
+    });
+    return { success: true, comment: mapDbComment(dbComment) };
+  } catch (error: any) {
+    console.error('Failed to create progress update comment:', error);
+    return { success: false, error: 'Не удалось отправить комментарий' };
+  }
+}
+
+export async function replyToComment(
+  commentId: string,
+  content: string
+): Promise<{ success: boolean; comment?: Comment; error?: string }> {
+  try {
+    const authorId = await getCurrentUserId();
+    if (!authorId) return { success: false, error: 'Необходимо авторизоваться' };
+
+    const cleanContent = content.trim();
+    if (!cleanContent) return { success: false, error: 'Ответ не может быть пустым' };
+    if (cleanContent.length > 1000) return { success: false, error: 'Ответ слишком длинный' };
+
+    const parentComment = await prisma.comment.findUnique({
+      where: { id: commentId },
+    });
+    if (!parentComment) return { success: false, error: 'Родительский комментарий не найден' };
+
+    const dbComment = await prisma.comment.create({
+      data: {
+        projectId: parentComment.projectId,
+        progressUpdateId: parentComment.progressUpdateId,
+        parentId: commentId,
+        authorId,
+        content: cleanContent,
+      },
+      include: {
+        author: true,
+        replies: {
+          include: {
+            author: true,
+          },
+        },
+      },
+    });
+    return { success: true, comment: mapDbComment(dbComment) };
+  } catch (error: any) {
+    console.error('Failed to reply to comment:', error);
+    return { success: false, error: 'Не удалось отправить ответ' };
+  }
+}
+
+export async function deleteComment(commentId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) return { success: false, error: 'Необходимо авторизоваться' };
+
+    const comment = await prisma.comment.findUnique({
+      where: { id: commentId },
+      include: { project: true },
+    });
+    if (!comment) return { success: false, error: 'Комментарий не найден' };
+
+    const isAuthor = comment.authorId === userId;
+    const isProjectOwner = comment.project.ownerId === userId;
+
+    if (!isAuthor && !isProjectOwner) {
+      return { success: false, error: 'Недостаточно прав для удаления' };
+    }
+
+    await prisma.comment.delete({
+      where: { id: commentId },
+    });
+    return { success: true };
+  } catch (error: any) {
+    console.error('Failed to delete comment:', error);
+    return { success: false, error: 'Не удалось удалить комментарий' };
+  }
+}
+
+export async function updateComment(
+  commentId: string,
+  content: string
+): Promise<{ success: boolean; comment?: Comment; error?: string }> {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) return { success: false, error: 'Необходимо авторизоваться' };
+
+    const cleanContent = content.trim();
+    if (!cleanContent) return { success: false, error: 'Комментарий не может быть пустым' };
+    if (cleanContent.length > 1000) return { success: false, error: 'Комментарий слишком длинный' };
+
+    const comment = await prisma.comment.findUnique({
+      where: { id: commentId },
+    });
+    if (!comment) return { success: false, error: 'Комментарий не найден' };
+
+    if (comment.authorId !== userId) {
+      return { success: false, error: 'Недостаточно прав для редактирования' };
+    }
+
+    const updated = await prisma.comment.update({
+      where: { id: commentId },
+      data: { content: cleanContent },
+      include: {
+        author: true,
+        replies: {
+          include: {
+            author: true,
+          },
+        },
+      },
+    });
+    return { success: true, comment: mapDbComment(updated) };
+  } catch (error: any) {
+    console.error('Failed to update comment:', error);
+    return { success: false, error: 'Не удалось отредактировать комментарий' };
+  }
+}
+
 
 

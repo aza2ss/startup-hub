@@ -25,10 +25,15 @@ export interface ProjectLink {
 export interface Comment {
   id: string;
   projectId: string;
+  progressUpdateId?: string | null;
   authorId: string;
   authorName: string | null;
+  authorAvatar?: string | null;
   content: string;
+  parentId?: string | null;
+  replies?: Comment[];
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface ProgressUpdate {

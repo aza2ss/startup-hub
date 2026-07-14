@@ -106,6 +106,7 @@ model ProgressUpdate {
   content   String
   type      String   // milestone, update, launch, team
   createdAt DateTime @default(now())
+  comments  Comment[]
 }
 
 model TeamRequest {
@@ -130,13 +131,19 @@ model TeamApplication {
 }
 
 model Comment {
-  id        String   @id @default(uuid())
-  projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  authorId  String
-  author    User     @relation(fields: [authorId], references: [id])
-  content   String
-  createdAt DateTime @default(now())
+  id               String          @id @default(uuid())
+  projectId        String
+  project          Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  progressUpdateId String?
+  progressUpdate   ProgressUpdate? @relation(fields: [progressUpdateId], references: [id], onDelete: Cascade)
+  authorId         String
+  author           User            @relation(fields: [authorId], references: [id])
+  content          String
+  parentId         String?
+  parent           Comment?        @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies          Comment[]       @relation("CommentReplies")
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 }
 
 model ProjectFollow {

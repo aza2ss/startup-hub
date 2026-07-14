@@ -4,6 +4,7 @@ import { use, useState, useEffect } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getProjectById, createProgressUpdate, followProject, unfollowProject, isFollowingProject, saveProject, unsaveProject, isProjectSaved } from '@/lib/actions';
+import ProjectComments from '@/components/projects/ProjectComments';
 import { getCustomProjects, getCustomProgressUpdates, saveProgressUpdate } from '@/lib/storage';
 import { formatLongDate } from '@/lib/format';
 import StatusBadge from '@/components/projects/StatusBadge';
@@ -302,6 +303,10 @@ export default function ProjectPage({
                 </span>
               ))}
             </div>
+          </section>
+
+          <section className="card p-6">
+            <ProjectComments projectId={project.id} ownerId={project.ownerId} />
           </section>
         </div>
 
