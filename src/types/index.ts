@@ -13,6 +13,8 @@ export interface User {
   skills: Skill[];
   projectIds: string[];
   createdAt: string;
+  followersCount?: number;
+  followingCount?: number;
 }
 
 export interface ProjectLink {
@@ -68,4 +70,6 @@ export interface Project {
   openPositions: TeamRequest[];
   progressLog: ProgressUpdate[];
   comments: Comment[];
+  followersCount?: number;
+  savedCount?: number;
 }

@@ -3,8 +3,8 @@
 import { use, useState, useEffect } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { useSession } from 'next-auth/react';
-import { getUserById, getUserProjects, getUserProgressUpdates, getUserOpenTeamRequests } from '@/lib/actions';
+import { useSession, signIn } from 'next-auth/react';
+import { getUserById, getUserProjects, getUserProgressUpdates, getUserOpenTeamRequests, followUser, unfollowUser, isFollowingUser } from '@/lib/actions';
 import UserProfileCard from '@/components/profile/UserProfileCard';
 import ProjectCard from '@/components/projects/ProjectCard';
 import ProgressUpdateItem from '@/components/progress/ProgressUpdateItem';
@@ -25,6 +25,12 @@ export default function PublicUserPage({
   const [openRequests, setOpenRequests] = useState<TeamRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Follow states
+  const [following, setFollowing] = useState(false);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+  const [followLoading, setFollowLoading] = useState(false);
+
   useEffect(() => {
     const fetchData = async () => {
       const dbUser = await getUserById(id);
@@ -34,6 +40,8 @@ export default function PublicUserPage({
         return;
       }
       setUser(dbUser);
+      setFollowersCount(dbUser.followersCount ?? 0);
+      setFollowingCount(dbUser.followingCount ?? 0);
 
       const dbProjects = await getUserProjects(id);
       const dbUpdates = await getUserProgressUpdates(id);
@@ -48,6 +56,17 @@ export default function PublicUserPage({
     fetchData();
   }, [id]);
 
+  useEffect(() => {
+    if (!user) return;
+    if (session?.user) {
+      const checkStatus = async () => {
+        const isFollow = await isFollowingUser(user.id);
+        setFollowing(isFollow);
+      };
+      checkStatus();
+    }
+  }, [user, session]);
+
   if (loading) {
     return <div className="text-sm text-muted">Загрузка...</div>;
   }
@@ -57,6 +76,32 @@ export default function PublicUserPage({
   }
 
   const isOwnProfile = session?.user?.id === user.id;
+
+  const handleUserFollowToggle = async () => {
+    if (!session?.user) {
+      signIn();
+      return;
+    }
+    setFollowLoading(true);
+    if (following) {
+      const res = await unfollowUser(user.id);
+      if (res.success) {
+        setFollowing(false);
+        setFollowersCount((prev) => Math.max(0, prev - 1));
+      } else {
+        alert(res.error || 'Ошибка');
+      }
+    } else {
+      const res = await followUser(user.id);
+      if (res.success) {
+        setFollowing(true);
+        setFollowersCount((prev) => prev + 1);
+      } else {
+        alert(res.error || 'Ошибка');
+      }
+    }
+    setFollowLoading(false);
+  };
 
   return (
     <div className="space-y-6">
@@ -83,6 +128,34 @@ export default function PublicUserPage({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="space-y-4">
           <UserProfileCard user={user} />
+          
+          <div className="card p-5 space-y-4">
+            <h3 className="section-label mb-1">Связи</h3>
+            <div className="grid grid-cols-2 gap-2 text-center">
+              <div className="p-2 bg-surface border border-border">
+                <p className="text-lg font-bold text-foreground">{followersCount}</p>
+                <p className="text-2xs text-muted font-semibold uppercase">Подписчики</p>
+              </div>
+              <div className="p-2 bg-surface border border-border">
+                <p className="text-lg font-bold text-foreground">{followingCount}</p>
+                <p className="text-2xs text-muted font-semibold uppercase">Подписки</p>
+              </div>
+            </div>
+
+            {!isOwnProfile && (
+              <button
+                onClick={handleUserFollowToggle}
+                disabled={followLoading}
+                className={`w-full text-center text-xs py-2 border transition-colors cursor-pointer ${
+                  following
+                    ? 'bg-surface text-muted border-border hover:bg-surface-hover'
+                    : 'btn-primary'
+                }`}
+              >
+                {followLoading ? 'Загрузка...' : following ? '✓ Вы подписаны (Отписаться)' : '✉ Подписаться'}
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="lg:col-span-2 space-y-6">

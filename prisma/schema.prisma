@@ -24,6 +24,10 @@ model User {
   comments       Comment[]
   accounts       Account[]
   sessions       Session[]
+  projectFollows ProjectFollow[]
+  savedProjects  SavedProject[]
+  followers      UserFollow[]     @relation("UserFollowing")
+  following      UserFollow[]     @relation("UserFollower")
 }
 
 model Account {
@@ -81,6 +85,8 @@ model Project {
   openPositions   TeamRequest[]
   progressLog     ProgressUpdate[]
   comments        Comment[]
+  follows         ProjectFollow[]
+  savedBy         SavedProject[]
 }
 
 model ProjectLink {
@@ -132,3 +138,40 @@ model Comment {
   content   String
   createdAt DateTime @default(now())
 }
+
+model ProjectFollow {
+  id        String   @id @default(cuid())
+  userId    String
+  projectId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+}
+
+model UserFollow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("UserFollower", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("UserFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+}
+
+model SavedProject {
+  id        String   @id @default(cuid())
+  userId    String
+  projectId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+}
+

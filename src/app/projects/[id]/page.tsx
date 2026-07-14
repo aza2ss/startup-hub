@@ -3,7 +3,7 @@
 import { use, useState, useEffect } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { getProjectById, createProgressUpdate } from '@/lib/actions';
+import { getProjectById, createProgressUpdate, followProject, unfollowProject, isFollowingProject, saveProject, unsaveProject, isProjectSaved } from '@/lib/actions';
 import { getCustomProjects, getCustomProgressUpdates, saveProgressUpdate } from '@/lib/storage';
 import { formatLongDate } from '@/lib/format';
 import StatusBadge from '@/components/projects/StatusBadge';
@@ -11,7 +11,7 @@ import ProgressLog from '@/components/progress/ProgressLog';
 import TeamRequestCard from '@/components/team/TeamRequestCard';
 import { UserAvatar } from '@/components/ui/Avatar';
 import type { Project, ProgressUpdate } from '@/types';
-import { useSession } from 'next-auth/react';
+import { useSession, signIn } from 'next-auth/react';
 
 export default function ProjectPage({
   params,
@@ -29,6 +29,14 @@ export default function ProjectPage({
   const [formError, setFormError] = useState('');
   const [success, setSuccess] = useState(false);
 
+  // Follow & Save states
+  const [following, setFollowing] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [savedCount, setSavedCount] = useState(0);
+  const [followLoading, setFollowLoading] = useState(false);
+  const [saveLoading, setSaveLoading] = useState(false);
+
   useEffect(() => {
     const timer = setTimeout(async () => {
       // 1. Fetch from DB
@@ -41,6 +49,8 @@ export default function ProjectPage({
           ...dbProj,
           progressLog: [...localUpdates, ...dbProj.progressLog],
         });
+        setFollowersCount(dbProj.followersCount ?? 0);
+        setSavedCount(dbProj.savedCount ?? 0);
       } else {
         // 3. Fallback to LocalStorage custom projects
         const localProj = getCustomProjects().find((p) => p.id === id);
@@ -49,6 +59,8 @@ export default function ProjectPage({
             ...localProj,
             progressLog: [...localUpdates, ...localProj.progressLog],
           });
+          setFollowersCount(localProj.followersCount ?? 0);
+          setSavedCount(localProj.savedCount ?? 0);
         } else {
           setProject(null);
         }
@@ -57,6 +69,19 @@ export default function ProjectPage({
     }, 0);
     return () => clearTimeout(timer);
   }, [id]);
+
+  useEffect(() => {
+    if (!project) return;
+    if (session?.user) {
+      const checkStatus = async () => {
+        const isFollow = await isFollowingProject(project.id);
+        const isSave = await isProjectSaved(project.id);
+        setFollowing(isFollow);
+        setSaved(isSave);
+      };
+      checkStatus();
+    }
+  }, [project, session]);
 
   if (loading) {
     return <div className="text-sm text-muted">Загрузка...</div>;
@@ -68,6 +93,58 @@ export default function ProjectPage({
 
   const isOwner = session?.user?.id === project.ownerId;
   const owner = project.teamMembers.find((member) => member.id === project.ownerId);
+
+  const handleFollowToggle = async () => {
+    if (!session?.user) {
+      signIn();
+      return;
+    }
+    setFollowLoading(true);
+    if (following) {
+      const res = await unfollowProject(project.id);
+      if (res.success) {
+        setFollowing(false);
+        setFollowersCount((prev) => Math.max(0, prev - 1));
+      } else {
+        alert(res.error || 'Ошибка');
+      }
+    } else {
+      const res = await followProject(project.id);
+      if (res.success) {
+        setFollowing(true);
+        setFollowersCount((prev) => prev + 1);
+      } else {
+        alert(res.error || 'Ошибка');
+      }
+    }
+    setFollowLoading(false);
+  };
+
+  const handleSaveToggle = async () => {
+    if (!session?.user) {
+      signIn();
+      return;
+    }
+    setSaveLoading(true);
+    if (saved) {
+      const res = await unsaveProject(project.id);
+      if (res.success) {
+        setSaved(false);
+        setSavedCount((prev) => Math.max(0, prev - 1));
+      } else {
+        alert(res.error || 'Ошибка');
+      }
+    } else {
+      const res = await saveProject(project.id);
+      if (res.success) {
+        setSaved(true);
+        setSavedCount((prev) => prev + 1);
+      } else {
+        alert(res.error || 'Ошибка');
+      }
+    }
+    setSaveLoading(false);
+  };
 
   const handleAddUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -248,29 +325,50 @@ export default function ProjectPage({
             </section>
           )}
 
-          {/* Guest tracking/application CTA widgets */}
-          {!isOwner && (
-            <section className="card p-5 space-y-3">
-              <h3 className="section-label mb-1">Связь и поддержка</h3>
+          {/* Interactive follow & save controls */}
+          <section className="card p-5 space-y-3">
+            <h3 className="section-label mb-1">Связь и поддержка</h3>
+            <div className="flex items-center justify-between text-xs text-muted mb-2">
+              <span>Подписчики: <strong>{followersCount}</strong></span>
+              <span>Сохранено: <strong>{savedCount}</strong></span>
+            </div>
+
+            <button
+              onClick={handleFollowToggle}
+              disabled={followLoading}
+              className={`w-full text-center text-xs py-2 border transition-colors cursor-pointer ${
+                following
+                  ? 'bg-surface text-muted border-border hover:bg-surface-hover'
+                  : 'btn-secondary'
+              }`}
+            >
+              {followLoading ? 'Загрузка...' : following ? '✓ Вы подписаны (Не следить)' : '★ Следить за проектом'}
+            </button>
+
+            <button
+              onClick={handleSaveToggle}
+              disabled={saveLoading}
+              className={`w-full text-center text-xs py-2 border transition-colors cursor-pointer ${
+                saved
+                  ? 'bg-surface text-muted border-border hover:bg-surface-hover'
+                  : 'btn-secondary'
+              }`}
+            >
+              {saveLoading ? 'Загрузка...' : saved ? '✓ Сохранено (Удалить)' : '💾 Сохранить проект'}
+            </button>
+
+            {!isOwner && project.openPositions.length > 0 && (
               <button
-                onClick={() => alert('Вы начали подписку на обновления проекта!')}
-                className="btn-secondary w-full text-center text-xs"
+                onClick={() => {
+                  const el = document.getElementById('open-positions-sec');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="btn-primary w-full text-center text-xs py-2 block"
               >
-                ★ Следить за проектом
+                ✉ Откликнуться в команду
               </button>
-              {project.openPositions.length > 0 && (
-                <button
-                  onClick={() => {
-                    const el = document.getElementById('open-positions-sec');
-                    if (el) el.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  className="btn-primary w-full text-center text-xs block"
-                >
-                  ✉ Откликнуться в команду
-                </button>
-              )}
-            </section>
-          )}
+            )}
+          </section>
 
           <section className="card p-5">
             <h3 className="section-label mb-3">Команда</h3>

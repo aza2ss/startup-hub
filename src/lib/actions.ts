@@ -64,6 +64,8 @@ function mapDbProject(dbProj: any): Project {
       content: c.content,
       createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : c.createdAt,
     })) : [],
+    followersCount: dbProj._count?.follows ?? 0,
+    savedCount: dbProj._count?.savedBy ?? 0,
   };
 }
 
@@ -96,6 +98,12 @@ export async function getProjects(filter?: { ownerId?: string }): Promise<Projec
             createdAt: 'desc',
           },
         },
+        _count: {
+          select: {
+            follows: true,
+            savedBy: true,
+          }
+        }
       },
       orderBy: {
         createdAt: 'desc',
@@ -133,6 +141,12 @@ export async function getProjectById(id: string): Promise<Project | null> {
             createdAt: 'desc',
           },
         },
+        _count: {
+          select: {
+            follows: true,
+            savedBy: true,
+          }
+        }
       },
     });
     return dbProject ? mapDbProject(dbProject) : null;
@@ -361,9 +375,22 @@ export async function getUserProfile(userId: string): Promise<import('@/types').
   try {
     const dbUser = await prisma.user.findUnique({
       where: { id: userId },
+      include: {
+        _count: {
+          select: {
+            followers: true,
+            following: true,
+          }
+        }
+      }
     });
     if (!dbUser) return null;
-    return mapDbUser(dbUser);
+    const mapped = mapDbUser(dbUser);
+    return {
+      ...mapped,
+      followersCount: dbUser._count?.followers ?? 0,
+      followingCount: dbUser._count?.following ?? 0,
+    };
   } catch (error) {
     console.error(`Failed to fetch user profile ${userId}:`, error);
     return null;
@@ -404,6 +431,12 @@ export async function getUserProjects(userId: string): Promise<Project[]> {
             createdAt: 'desc',
           },
         },
+        _count: {
+          select: {
+            follows: true,
+            savedBy: true,
+          }
+        }
       },
       orderBy: {
         createdAt: 'desc',
@@ -499,4 +532,221 @@ export async function updateUserProfile(data: {
     return { success: false, error: error.message || 'Ошибка обновления профиля' };
   }
 }
+
+export async function followProject(projectId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) return { success: false, error: 'Необходимо авторизоваться для подписки' };
+    
+    await prisma.projectFollow.upsert({
+      where: { userId_projectId: { userId, projectId } },
+      update: {},
+      create: { userId, projectId }
+    });
+    return { success: true };
+  } catch (error: any) {
+    console.error('Failed to follow project:', error);
+    return { success: false, error: 'Ошибка подписки на проект' };
+  }
+}
+
+export async function unfollowProject(projectId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) return { success: false, error: 'Необходимо авторизоваться' };
+    
+    await prisma.projectFollow.delete({
+      where: { userId_projectId: { userId, projectId } }
+    });
+    return { success: true };
+  } catch (error: any) {
+    console.error('Failed to unfollow project:', error);
+    return { success: false, error: 'Ошибка отмены подписки' };
+  }
+}
+
+export async function isFollowingProject(projectId: string): Promise<boolean> {
+  const userId = await getCurrentUserId();
+  if (!userId) return false;
+  const follow = await prisma.projectFollow.findUnique({
+    where: { userId_projectId: { userId, projectId } }
+  });
+  return !!follow;
+}
+
+export async function saveProject(projectId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) return { success: false, error: 'Необходимо авторизоваться для сохранения проекта' };
+    
+    await prisma.savedProject.upsert({
+      where: { userId_projectId: { userId, projectId } },
+      update: {},
+      create: { userId, projectId }
+    });
+    return { success: true };
+  } catch (error: any) {
+    console.error('Failed to save project:', error);
+    return { success: false, error: 'Ошибка сохранения проекта' };
+  }
+}
+
+export async function unsaveProject(projectId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) return { success: false, error: 'Необходимо авторизоваться' };
+    
+    await prisma.savedProject.delete({
+      where: { userId_projectId: { userId, projectId } }
+    });
+    return { success: true };
+  } catch (error: any) {
+    console.error('Failed to unsave project:', error);
+    return { success: false, error: 'Ошибка удаления сохраненного проекта' };
+  }
+}
+
+export async function isProjectSaved(projectId: string): Promise<boolean> {
+  const userId = await getCurrentUserId();
+  if (!userId) return false;
+  const saved = await prisma.savedProject.findUnique({
+    where: { userId_projectId: { userId, projectId } }
+  });
+  return !!saved;
+}
+
+export async function followUser(followingId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) return { success: false, error: 'Необходимо авторизоваться' };
+    if (userId === followingId) return { success: false, error: 'Нельзя подписаться на самого себя' };
+    
+    await prisma.userFollow.upsert({
+      where: { followerId_followingId: { followerId: userId, followingId } },
+      update: {},
+      create: { followerId: userId, followingId }
+    });
+    return { success: true };
+  } catch (error: any) {
+    console.error('Failed to follow user:', error);
+    return { success: false, error: 'Ошибка подписки на пользователя' };
+  }
+}
+
+export async function unfollowUser(followingId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) return { success: false, error: 'Необходимо авторизоваться' };
+    
+    await prisma.userFollow.delete({
+      where: { followerId_followingId: { followerId: userId, followingId } }
+    });
+    return { success: true };
+  } catch (error: any) {
+    console.error('Failed to unfollow user:', error);
+    return { success: false, error: 'Ошибка отмены подписки' };
+  }
+}
+
+export async function isFollowingUser(followingId: string): Promise<boolean> {
+  const userId = await getCurrentUserId();
+  if (!userId) return false;
+  const follow = await prisma.userFollow.findUnique({
+    where: { followerId_followingId: { followerId: userId, followingId } }
+  });
+  return !!follow;
+}
+
+export async function getPersonalFeed(): Promise<ProgressUpdate[]> {
+  const userId = await getCurrentUserId();
+  if (!userId) return [];
+
+  // Get followed project IDs
+  const followedProjects = await prisma.projectFollow.findMany({
+    where: { userId },
+    select: { projectId: true }
+  });
+  const projectIds = followedProjects.map(f => f.projectId);
+
+  // Get followed user IDs
+  const followedUsers = await prisma.userFollow.findMany({
+    where: { followerId: userId },
+    select: { followingId: true }
+  });
+  const followingIds = followedUsers.map(f => f.followingId);
+
+  // Fetch progress updates
+  const dbUpdates = await prisma.progressUpdate.findMany({
+    where: {
+      OR: [
+        { projectId: { in: projectIds } },
+        { authorId: { in: followingIds } }
+      ]
+    },
+    include: {
+      author: true
+    },
+    orderBy: {
+      createdAt: 'desc'
+    }
+  });
+
+  return dbUpdates.map((u: any) => ({
+    id: u.id,
+    projectId: u.projectId,
+    authorId: u.authorId,
+    authorName: u.author ? u.author.name : null,
+    authorAvatar: u.author ? u.author.avatar : null,
+    content: u.content,
+    type: u.type as ProgressUpdate['type'],
+    createdAt: u.createdAt.toISOString(),
+  }));
+}
+
+export async function getSavedProjects(): Promise<Project[]> {
+  const userId = await getCurrentUserId();
+  if (!userId) return [];
+
+  const dbSaved = await prisma.savedProject.findMany({
+    where: { userId },
+    include: {
+      project: {
+        include: {
+          owner: true,
+          teamMembers: true,
+          links: true,
+          openPositions: true,
+          progressLog: {
+            include: {
+              author: true,
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+          },
+          comments: {
+            include: {
+              author: true,
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+          },
+          _count: {
+            select: {
+              follows: true,
+              savedBy: true,
+            }
+          }
+        }
+      }
+    },
+    orderBy: {
+      createdAt: 'desc'
+    }
+  });
+
+  return dbSaved.map(s => mapDbProject(s.project));
+}
+
 
