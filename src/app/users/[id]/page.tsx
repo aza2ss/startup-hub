@@ -1,0 +1,132 @@
+'use client';
+
+import { use, useState, useEffect } from 'react';
+import { notFound } from 'next/navigation';
+import Link from 'next/link';
+import { useSession } from 'next-auth/react';
+import { getUserById, getUserProjects, getUserProgressUpdates, getUserOpenTeamRequests } from '@/lib/actions';
+import UserProfileCard from '@/components/profile/UserProfileCard';
+import ProjectCard from '@/components/projects/ProjectCard';
+import ProgressUpdateItem from '@/components/progress/ProgressUpdateItem';
+import TeamRequestCard from '@/components/team/TeamRequestCard';
+import EmptyState from '@/components/ui/EmptyState';
+import type { User, Project, ProgressUpdate, TeamRequest } from '@/types';
+
+export default function PublicUserPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(params);
+  const { data: session } = useSession();
+  const [user, setUser] = useState<User | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [updates, setUpdates] = useState<ProgressUpdate[]>([]);
+  const [openRequests, setOpenRequests] = useState<TeamRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const dbUser = await getUserById(id);
+      if (!dbUser) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+      setUser(dbUser);
+
+      const dbProjects = await getUserProjects(id);
+      const dbUpdates = await getUserProgressUpdates(id);
+      const dbRequests = await getUserOpenTeamRequests(id);
+
+      setProjects(dbProjects);
+      setUpdates(dbUpdates);
+      setOpenRequests(dbRequests);
+      setLoading(false);
+    };
+
+    fetchData();
+  }, [id]);
+
+  if (loading) {
+    return <div className="text-sm text-muted">Загрузка...</div>;
+  }
+
+  if (!user) {
+    notFound();
+  }
+
+  const isOwnProfile = session?.user?.id === user.id;
+
+  return (
+    <div className="space-y-6">
+      <div className="rule-bottom pb-6 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="section-label mb-3">Founder profile</p>
+          <h1 className="page-title">{user.name || 'Профиль'}</h1>
+        </div>
+        {isOwnProfile ? (
+          <Link href="/profile" className="btn-secondary text-sm">
+            Редактировать профиль
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => alert('Связь с основателем: ' + (user.name || 'пользователь'))}
+            className="btn-primary text-sm"
+          >
+            Предложить сотрудничество
+          </button>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="space-y-4">
+          <UserProfileCard user={user} />
+        </div>
+
+        <div className="lg:col-span-2 space-y-6">
+          <section>
+            <h2 className="section-title mb-3">Проекты пользователя</h2>
+            {projects.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {projects.map((project) => (
+                  <ProjectCard key={project.id} project={project} />
+                ))}
+              </div>
+            ) : (
+              <EmptyState title="Проектов пока нет" />
+            )}
+          </section>
+
+          {openRequests.length > 0 && (
+            <section>
+              <h2 className="section-title mb-3">Открытые роли в проектах</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {openRequests.map((request) => (
+                  <TeamRequestCard key={request.id} request={request} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section>
+            <h2 className="section-title mb-3">Активность</h2>
+            {updates.length > 0 ? (
+              <div className="card p-5">
+                <div className="relative pl-4">
+                  <div className="absolute left-[5px] top-2 bottom-2 w-px bg-border" />
+                  {updates.map((update) => (
+                    <ProgressUpdateItem key={update.id} update={update} />
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <EmptyState title="Обновлений активности пока нет" />
+            )}
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+}

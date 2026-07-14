@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { ProgressUpdate } from '@/types';
 import { formatLongDate } from '@/lib/format';
 import Avatar from '@/components/ui/Avatar';
@@ -16,10 +17,12 @@ export default function ProgressUpdateItem({ update }: { update: ProgressUpdate 
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-2 flex-wrap">
-          <Avatar name={update.authorName} avatar={update.authorAvatar} size="sm" />
-          <span className="text-sm font-semibold text-foreground">
-            {update.authorName ?? 'Участник'}
-          </span>
+          <Link href={`/users/${update.authorId}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+            <Avatar name={update.authorName} avatar={update.authorAvatar} size="sm" />
+            <span className="text-sm font-semibold text-foreground">
+              {update.authorName ?? 'Участник'}
+            </span>
+          </Link>
           <span className="meta-text">
             {formatLongDate(update.createdAt)}
           </span>

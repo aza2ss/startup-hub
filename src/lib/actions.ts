@@ -165,8 +165,8 @@ export async function createProject(data: {
     if (!data.description || data.description.trim().length < 10) {
       return { success: false, error: 'Краткое описание должно быть не менее 10 символов' };
     }
-    if (!data.category) {
-      return { success: false, error: 'Категория обязательна' };
+    if (!data.category || !data.category.trim()) {
+      return { success: false, error: 'Категория проекта обязательна' };
     }
 
     const projectId = `proj-${Date.now()}`;
@@ -182,7 +182,7 @@ export async function createProject(data: {
         description: data.description.trim(),
         longDescription: data.longDescription.trim(),
         status: data.status,
-        category: data.category,
+        category: data.category.trim(),
         tags: data.tags,
         technologies: '',
         progress: 10,
@@ -212,7 +212,7 @@ export async function createProject(data: {
     return { success: true, projectId };
   } catch (error: any) {
     console.error('Failed to create project in DB:', error);
-    return { success: false, error: error.message || 'Ошибка создания проекта на сервере' };
+    return { success: false, error: 'Не удалось создать проект. Пожалуйста, попробуйте позже.' };
   }
 }
 
@@ -226,6 +226,10 @@ export async function createProgressUpdate(data: {
     const authorId = await getCurrentUserId();
     if (!authorId) {
       return { success: false, error: 'Необходимо авторизоваться' };
+    }
+
+    if (!data.projectId || !data.projectId.trim()) {
+      return { success: false, error: 'Идентификатор проекта обязателен' };
     }
 
     if (!data.content.trim()) {
@@ -260,7 +264,7 @@ export async function createProgressUpdate(data: {
     return { success: true, update };
   } catch (error: any) {
     console.error('Failed to create progress update in DB:', error);
-    return { success: false, error: error.message || 'Ошибка сохранения обновления' };
+    return { success: false, error: 'Не удалось сохранить обновление. Пожалуйста, попробуйте позже.' };
   }
 }
 
@@ -366,6 +370,107 @@ export async function getUserProfile(userId: string): Promise<import('@/types').
   }
 }
 
+export async function getUserById(id: string): Promise<import('@/types').User | null> {
+  return getUserProfile(id);
+}
+
+export async function getUserProjects(userId: string): Promise<Project[]> {
+  try {
+    const dbProjects = await prisma.project.findMany({
+      where: {
+        OR: [
+          { ownerId: userId },
+          { teamMembers: { some: { id: userId } } }
+        ]
+      },
+      include: {
+        owner: true,
+        teamMembers: true,
+        links: true,
+        openPositions: true,
+        progressLog: {
+          include: {
+            author: true,
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        },
+        comments: {
+          include: {
+            author: true,
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+    return dbProjects.map(mapDbProject);
+  } catch (error) {
+    console.error(`Failed to fetch projects for user ${userId}:`, error);
+    return [];
+  }
+}
+
+export async function getUserProgressUpdates(userId: string): Promise<ProgressUpdate[]> {
+  try {
+    const dbUpdates = await prisma.progressUpdate.findMany({
+      where: { authorId: userId },
+      include: {
+        author: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+    return dbUpdates.map((u: any) => ({
+      id: u.id,
+      projectId: u.projectId,
+      authorId: u.authorId,
+      authorName: u.author ? u.author.name : null,
+      authorAvatar: u.author ? u.author.avatar : null,
+      content: u.content,
+      type: u.type as ProgressUpdate['type'],
+      createdAt: u.createdAt.toISOString(),
+    }));
+  } catch (error) {
+    console.error(`Failed to fetch progress updates for user ${userId}:`, error);
+    return [];
+  }
+}
+
+export async function getUserOpenTeamRequests(userId: string): Promise<TeamRequest[]> {
+  try {
+    const dbRequests = await prisma.teamRequest.findMany({
+      where: {
+        project: { ownerId: userId }
+      },
+      include: {
+        project: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+    return dbRequests.map((r: any) => ({
+      id: r.id,
+      projectId: r.projectId,
+      projectTitle: r.project.title,
+      role: r.role,
+      description: r.description,
+      skills: r.skills ? r.skills.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
+      createdAt: r.createdAt.toISOString(),
+    }));
+  } catch (error) {
+    console.error(`Failed to fetch open positions for user ${userId}:`, error);
+    return [];
+  }
+}
+
 export async function updateUserProfile(data: {
   name: string;
   role: string;
@@ -394,3 +499,4 @@ export async function updateUserProfile(data: {
     return { success: false, error: error.message || 'Ошибка обновления профиля' };
   }
 }
+

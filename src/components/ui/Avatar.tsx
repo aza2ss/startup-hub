@@ -44,6 +44,14 @@ export default function Avatar({
   );
 }
 
-export function UserAvatar({ user, size = 'md' }: { user: User; size?: 'sm' | 'md' | 'lg' }) {
-  return <Avatar name={user.name} avatar={user.avatar} size={size} />;
+export function UserAvatar({
+  user,
+  size = 'md',
+  className = '',
+}: {
+  user: User;
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
+}) {
+  return <Avatar name={user.name} avatar={user.avatar} size={size} className={className} />;
 }

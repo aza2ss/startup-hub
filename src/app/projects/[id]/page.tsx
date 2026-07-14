@@ -2,6 +2,7 @@
 
 import { use, useState, useEffect } from 'react';
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import { getProjectById, createProgressUpdate } from '@/lib/actions';
 import { getCustomProjects, getCustomProgressUpdates, saveProgressUpdate } from '@/lib/storage';
 import { formatLongDate } from '@/lib/format';
@@ -64,6 +65,9 @@ export default function ProjectPage({
   if (!project) {
     notFound();
   }
+
+  const isOwner = session?.user?.id === project.ownerId;
+  const owner = project.teamMembers.find((member) => member.id === project.ownerId);
 
   const handleAddUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,16 +132,26 @@ export default function ProjectPage({
 
   return (
     <div className="space-y-6">
-      <div className="border-b border-border pb-6">
-        <p className="section-label mb-3">Project page</p>
-        <div className="flex items-center gap-2 mb-3">
-          <StatusBadge status={project.status} />
-          <span className="meta-text">{project.category}</span>
+      <div className="border-b border-border pb-6 flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="section-label mb-3">Project page</p>
+          <div className="flex items-center gap-2 mb-3">
+            <StatusBadge status={project.status} />
+            <span className="meta-text">{project.category}</span>
+          </div>
+          <h1 className="page-title mb-3">
+            {project.title}
+          </h1>
+          <p className="text-base text-muted max-w-2xl leading-relaxed">{project.description}</p>
         </div>
-        <h1 className="page-title mb-3">
-          {project.title}
-        </h1>
-        <p className="text-base text-muted max-w-2xl leading-relaxed">{project.description}</p>
+        {isOwner && (
+          <button
+            onClick={() => alert('Редактирование проекта (заглушка)')}
+            className="btn-secondary text-sm"
+          >
+            Редактировать проект
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -145,50 +159,56 @@ export default function ProjectPage({
           <section className="card p-6">
             <h2 className="section-title mb-4">Progress log</h2>
             
-            {/* Add progress update form */}
-            <form onSubmit={handleAddUpdate} className="mb-6 p-4 bg-surface border border-border space-y-3">
-              <p className="meta-text">Добавить обновление прогресса</p>
-              
-              {success && (
-                <div className="p-2 bg-primary-light border border-primary text-xs text-primary font-bold">
-                  ✓ Обновление успешно добавлено!
-                </div>
-              )}
+            {/* Add progress update form - Only for Project Owner */}
+            {isOwner ? (
+              <form onSubmit={handleAddUpdate} className="mb-6 p-4 bg-surface border border-border space-y-3">
+                <p className="meta-text">Добавить обновление прогресса</p>
+                
+                {success && (
+                  <div className="p-2 bg-primary-light border border-primary text-xs text-primary font-bold">
+                    ✓ Обновление успешно добавлено!
+                  </div>
+                )}
 
-              <div>
-                <textarea
-                  placeholder="Опишите, что было сделано..."
-                  value={content}
-                  onChange={(e) => {
-                    setContent(e.target.value);
-                    if (formError) setFormError('');
-                  }}
-                  rows={3}
-                  className={`input-field text-sm ${formError ? 'border-primary' : ''}`}
-                />
-                {formError && <p className="text-xs text-primary mt-1">{formError}</p>}
-              </div>
-
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted">Тип:</span>
-                  <select
-                    value={updateType}
-                    onChange={(e) => setUpdateType(e.target.value as 'update' | 'milestone' | 'launch' | 'team')}
-                    className="input-field py-1 px-2 text-xs w-auto"
-                  >
-                    <option value="update">Обновление</option>
-                    <option value="milestone">Этап (milestone)</option>
-                    <option value="launch">Запуск (launch)</option>
-                    <option value="team">Команда (team)</option>
-                  </select>
+                <div>
+                  <textarea
+                    placeholder="Опишите, что было сделано..."
+                    value={content}
+                    onChange={(e) => {
+                      setContent(e.target.value);
+                      if (formError) setFormError('');
+                    }}
+                    rows={3}
+                    className={`input-field text-sm ${formError ? 'border-primary' : ''}`}
+                  />
+                  {formError && <p className="text-xs text-primary mt-1">{formError}</p>}
                 </div>
 
-                <button type="submit" className="btn-primary py-1.5 text-xs">
-                  Опубликовать обновление
-                </button>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted">Тип:</span>
+                    <select
+                      value={updateType}
+                      onChange={(e) => setUpdateType(e.target.value as 'update' | 'milestone' | 'launch' | 'team')}
+                      className="input-field py-1.5 px-2 text-xs w-auto"
+                    >
+                      <option value="update">Обновление</option>
+                      <option value="milestone">Этап (milestone)</option>
+                      <option value="launch">Запуск (launch)</option>
+                      <option value="team">Команда (team)</option>
+                    </select>
+                  </div>
+
+                  <button type="submit" className="btn-primary py-1.5 text-xs">
+                    Опубликовать обновление
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="mb-6 p-4 bg-surface border border-border text-xs text-muted">
+                Добавлять обновления прогресса может только создатель проекта.
               </div>
-            </form>
+            )}
 
             <ProgressLog updates={project.progressLog} />
           </section>
@@ -209,6 +229,49 @@ export default function ProjectPage({
         </div>
 
         <aside className="space-y-4">
+          {/* founder / creator card */}
+          {owner && (
+            <section className="card p-5">
+              <h3 className="section-label mb-3">Основатель</h3>
+              <div className="flex items-center gap-3">
+                <UserAvatar user={owner} size="md" />
+                <div className="min-w-0">
+                  <Link
+                    href={`/users/${owner.id}`}
+                    className="text-sm font-bold text-foreground hover:text-primary transition-colors block truncate"
+                  >
+                    {owner.name || 'Основатель'}
+                  </Link>
+                  <p className="text-xs text-muted truncate">{owner.role}</p>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Guest tracking/application CTA widgets */}
+          {!isOwner && (
+            <section className="card p-5 space-y-3">
+              <h3 className="section-label mb-1">Связь и поддержка</h3>
+              <button
+                onClick={() => alert('Вы начали подписку на обновления проекта!')}
+                className="btn-secondary w-full text-center text-xs"
+              >
+                ★ Следить за проектом
+              </button>
+              {project.openPositions.length > 0 && (
+                <button
+                  onClick={() => {
+                    const el = document.getElementById('open-positions-sec');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="btn-primary w-full text-center text-xs block"
+                >
+                  ✉ Откликнуться в команду
+                </button>
+              )}
+            </section>
+          )}
+
           <section className="card p-5">
             <h3 className="section-label mb-3">Команда</h3>
             <div className="space-y-3">
@@ -216,9 +279,12 @@ export default function ProjectPage({
                 <div key={member.id} className="flex items-center gap-2.5">
                   <UserAvatar user={member} size="sm" />
                   <div className="min-w-0">
-                    <p className="text-sm text-foreground truncate">
+                    <Link
+                      href={`/users/${member.id}`}
+                      className="text-sm text-foreground hover:text-primary transition-colors font-semibold block truncate"
+                    >
                       {member.name ?? 'Участник'}
-                    </p>
+                    </Link>
                     <p className="text-xs text-muted truncate">{member.role}</p>
                   </div>
                 </div>
@@ -265,7 +331,7 @@ export default function ProjectPage({
           </section>
 
           {project.openPositions.length > 0 && (
-            <section className="space-y-3">
+            <section id="open-positions-sec" className="space-y-3 scroll-mt-6">
               <h3 className="section-title">Открытые позиции</h3>
               <div className="space-y-3">
                 {project.openPositions.map((position) => (
